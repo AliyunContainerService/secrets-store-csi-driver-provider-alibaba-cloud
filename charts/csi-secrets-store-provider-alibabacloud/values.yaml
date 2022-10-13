@@ -1,0 +1,84 @@
+nameOverride: ""
+fullnameOverride: ""
+
+# One or more secrets to be used when pulling images
+imagePullSecrets: []
+# - name: myRegistryKeySecretName
+
+# log level. Uses V logs (klog)
+logVerbosity: 0
+
+linux:
+  image:
+    repository: registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud
+    tag: v0.1.0
+    pullPolicy: Always
+  nodeSelector: {}
+  tolerations: []
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      cpu: 100m
+      memory: 500Mi
+  podLabels: {}
+  podAnnotations: {}
+  priorityClassName: ""
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  healthzPort: 8989
+  healthzPath: "/healthz"
+  healthzTimeout: "5s"
+  volumes: []
+  volumeMounts: []
+  providersDir: /var/run/secrets-store-csi-providers
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: type
+            operator: NotIn
+            values:
+            - virtual-kubelet
+
+## Configuration values for the secrets-store-csi-driver dependency.
+## ref: https://github.com/kubernetes-sigs/secrets-store-csi-driver/tree/master/charts/secrets-store-csi-driver/README.md
+##
+secrets-store-csi-driver:
+  install: true
+  # By default helm will append the chart release name to the dependent chart names.
+  # Explicitly setting the fullnameOverride will override this behavior.
+  fullnameOverride: secrets-store-csi-driver
+  linux:
+    enabled: true
+    kubeletRootDir: /var/lib/kubelet
+    metricsAddr: ":8080"
+    image:
+      repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-driver
+      tag: v1.1.2
+      pullPolicy: Always
+    providersDir: /var/run/secrets-store-csi-providers
+    registrarImage:
+      repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar
+      tag: v2.5.0
+      pullPolicy: Always
+    livenessProbeImage:
+      repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-livenessprobe
+      tag: v2.6.0
+      pullPolicy: Always
+
+  rotationPollInterval: 2m
+  # Refer to https://secrets-store-csi-driver.sigs.k8s.io/load-tests.html for more details on actions to take before enabling this feature
+  filteredWatchSecret: true
+  
+  syncSecret:
+    enabled: false
+
+## Install default service account
+rbac:
+  install: true
