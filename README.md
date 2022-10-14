@@ -31,6 +31,14 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 | `imagePullSecrets`                                           | Secrets to be used when pulling images                       | `[]`                                                         |
 | `logFormatJSON`                                              | Use JSON logging format                                      | `false`                                                      |
 | `logVerbosity`                                               | Log level. Uses V logs (klog)                                | `0`                                                          |
+| `envVarsFromSecret.ACCESS_KEY_ID`                            | Set the ACCESS_KEY_ID variable to specify the credential RAM AK for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
+| `envVarsFromSecret.SECRET_ACCESS_KEY`                        | Set the SECRET_ACCESS_KEY variable to specify the credential RAM SK for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
+| `envVarsFromSecret.ALICLOUD_ROLE_ARN`                        | Set the ALICLOUD_ROLE_ARN variable to specify the RAM role ARN for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
+| `envVarsFromSecret.ALICLOUD_ROLE_SESSION_NAME`               | Set the ALICLOUD_ROLE_SESSION_NAME variable to specify the RAM role session name for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
+| `envVarsFromSecret.ALICLOUD_ROLE_SESSION_EXPIRATION`         | Set the ALICLOUD_ROLE_SESSION_NAME variable to specify the RAM role session expiration for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
+| `envVarsFromSecret. ALICLOUD_OIDC_PROVIDER_ARN`              | Set the ALICLOUD_OIDC_PROVIDER_ARN variable to specify the RAM OIDC  provider arn for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
+| `envVarsFromSecret.ALICLOUD_OIDC_TOKEN_FILE`                 | Set the ALICLOUD_OIDC_TOKEN_FILE variable to specify the serviceaccount OIDC token file path for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
+| rrsa.enable                                                  | Enable RRSA feature, default is false，when enalbe, you need to configure the parametes of  `ALICLOUD_ROLE_ARN` and `ALICLOUD_OIDC_PROVIDER_ARN`  in `envVarsFromSecret` | false                                                        |
 | `linux.enabled`                                              | Install alibabacloud keyvault provider on linux nodes        | true                                                         |
 | `linux.image.repository`                                     | Linux image repository                                       | `registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud` |
 | `linux.image.pullPolicy`                                     | Linux image pull policy                                      | `Always`                                                     |
@@ -58,7 +66,7 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 | `secrets-store-csi-driver.linux.image.tag`                   | Driver Linux image tag                                       | `v1.1.2`                                                     |
 | `secrets-store-csi-driver.linux.livenessProbeImage.repository` | Linux liveness-probe image repository                        | `registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-livenessprobe` |
 | `secrets-store-csi-driver.linux.livenessProbeImage.pullPolicy` | Linux liveness-probe image pull policy                       | `Always`                                                     |
-| `secrets-store-csi-driver.linux.livenessProbeImage.tag`      | Linux liveness-probe image tag                               | `v2.6.0`                                                    |
+| `secrets-store-csi-driver.linux.livenessProbeImage.tag`      | Linux liveness-probe image tag                               | `v2.6.0`                                                     |
 | `secrets-store-csi-driver.linux.registrarImage.repository`   | Linux node-driver-registrar image repository                 | `registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar` |
 | `secrets-store-csi-driver.linux.registrarImage.pullPolicy`   | Linux node-driver-registrar image pull policy                | `Always`                                                     |
 | `secrets-store-csi-driver.linux.registrarImage.tag`          | Linux node-driver-registrar image tag                        | `v2.5.0`                                                     |
@@ -81,18 +89,62 @@ Create an access policy for the pod scoped down to just the secrets it should ha
 aliyun ram CreatePolicy --PolicyName kms-test --PolicyDocument '{"Statement": [{"Effect": "Allow","Action": "kms:GetSecretValue","Resource": "acs:kms:{region-id}:{aliyun-uid}:secret/test"}],"Version": "1"}'
 ```
 
+### Enable [RRSA](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-rrsa-to-enforce-access-control#section-ywl-59g-j8h) feature
 
-Enable [RRSA](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-rrsa-to-enforce-access-control#section-ywl-59g-j8h) feature
+RAM Roles for Service Accounts (RRSA) is the recommended secure authentication method for obtaining secrets in Alibaba Cloud Secrets Manager. For the configuration, please refer to the following steps:
 
-Create the RAM OIDC provider for the cluster with [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool#credential) or reference [RRSA](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-rrsa-to-enforce-access-control#section-ywl-59g-j8h) doc if you have not already done so:
+1. Create the RAM OIDC provider for the cluster with [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) or reference [RRSA](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-rrsa-to-enforce-access-control#section-ywl-59g-j8h) doc if you have not already done so:
 
 ```shell
 ack-ram-tool rrsa enable -c <clusterId>
 ```
-Next create the service account to be used by the pod and associate the above kms RAM policy with that service account. For this example we use *nginx-deployment-sa* for the service account name:
+2. Next create the service account to be used by the pod and associate the above kms RAM policy with that service account. Here we use [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) CLI to simplify the steps of RAM role creation and authorization:
+
 ```shell
 ack-ram-tool rrsa associate-role -c <clusterId> --create-role-if-not-exist -r <roleName> -n <namespace> -s <serviceAccount>
 ```
+
+3. Create a secret named `alibaba-credentials` in target cluster, create a template file below named `alibaba-credentials.yaml`:
+
+
+```yaml
+apiVersion: v1
+data:
+  oidcproviderarn: ****  
+  rolearn: ****   #specify the assumed ram role ARN, base64 encoding required
+kind: Secret
+metadata:
+  name: alibaba-credentials
+  namespace: kube-system
+type: Opaque  
+```
+
+**oidcproviderarn **: specify the cluster's OIDC provider ARN, you can obtain the value in [RAM SSO](https://ram.console.aliyun.com/providers) console, then find the target provider ARN in the `OIDC` tab.
+
+**rolearn **: specify the assumed ram role ARN, base64 encoding required
+
+Run the command to deploy secret:
+
+```bash
+kubectl apply -f alibaba-credentials.yaml
+```
+
+4. Update below envVarsFromSecret configuration in the values.yaml:
+
+```yaml
+envVarsFromSecret:
+ ALICLOUD_ROLE_ARN:
+   secretKeyRef: alibaba-credentials
+   key: rolearn
+ ALICLOUD_OIDC_PROVIDER_ARN:
+   secretKeyRef: alibaba-credentials
+   key: oidcproviderarn
+
+rrsa:
+  # Specifies whether using rrsa and enalbe sa token volume projection, default is false
+  enable: true
+```
+
 
 
 Now create the SecretProviderClass which tells the provider which secrets are to be mounted in the pod. The secretproviderclass.yaml in the [examples](./examples) directory will mount "test" created above.
