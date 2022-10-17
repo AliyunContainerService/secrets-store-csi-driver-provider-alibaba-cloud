@@ -13,7 +13,7 @@ Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you t
 - This chart installs the [secrets-store-csi-driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver) and the Alibaba Cloud KMS Secrets Manager provider for the driver
 
 ```shell
-helm repo add csi-secrets-store-provider-alibabacloud https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud/main/charts
+helm repo add csi-secrets-store-provider-alibabacloud https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/main/charts
 
 helm install csi-secrets-store-provider-alibabacloud/csi-secrets-store-provider-alibabacloud --generate-name
 ```
@@ -110,7 +110,7 @@ ack-ram-tool rrsa associate-role -c <clusterId> --create-role-if-not-exist -r <r
 ```yaml
 apiVersion: v1
 data:
-  oidcproviderarn: ****  
+  oidcproviderarn: ****
   rolearn: ****   #specify the assumed ram role ARN, base64 encoding required
 kind: Secret
 metadata:
@@ -133,12 +133,12 @@ kubectl apply -f alibaba-credentials.yaml
 
 ```yaml
 envVarsFromSecret:
- ALICLOUD_ROLE_ARN:
-   secretKeyRef: alibaba-credentials
-   key: rolearn
- ALICLOUD_OIDC_PROVIDER_ARN:
-   secretKeyRef: alibaba-credentials
-   key: oidcproviderarn
+  ALICLOUD_ROLE_ARN:
+    secretKeyRef: alibaba-credentials
+    key: rolearn
+  ALICLOUD_OIDC_PROVIDER_ARN:
+    secretKeyRef: alibaba-credentials
+    key: oidcproviderarn
 
 rrsa:
   # Specifies whether using rrsa and enalbe sa token volume projection, default is false
