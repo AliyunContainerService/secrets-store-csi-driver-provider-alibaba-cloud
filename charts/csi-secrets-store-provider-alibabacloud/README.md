@@ -13,7 +13,7 @@ Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you t
 - This chart installs the [secrets-store-csi-driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver) and the Alibaba Cloud KMS Secrets Manager provider for the driver
 
 ```shell
-helm repo add csi-secrets-store-provider-alibabacloud https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud/main/charts
+helm repo add csi-secrets-store-provider-alibabacloud https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/main/charts
 
 helm install csi-secrets-store-provider-alibabacloud/csi-secrets-store-provider-alibabacloud --generate-name
 ```
@@ -222,8 +222,8 @@ The objects field of the SecretProviderClass can contain the following sub-field
                     objectAlias: "MySecretPassword"
   ```
   If you use the jmesPath field,  you must provide the following two sub-fields:
-    * path: This required field is the [JMES path](https://jmespath.org/specification.html) to use for retrieval
-    * objectAlias: This required field specifies the file name under which the key-value pair secret will be mounted.
+  * path: This required field is the [JMES path](https://jmespath.org/specification.html) to use for retrieval
+  * objectAlias: This required field specifies the file name under which the key-value pair secret will be mounted.
 
 ## Additional Considerations
 
