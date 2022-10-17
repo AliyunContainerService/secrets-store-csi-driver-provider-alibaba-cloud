@@ -15,7 +15,7 @@ const (
 	EcsRamRoleAuthType = "ecs_ram_role"
 	OidcAuthType       = "oidc_role_arn"
 	roleSessionName    = "csi-secrets-store-provider-alibaba"
-	oidcTokenFilePath  = "/var/run/secrets/tokens/csi-secrets-store-provider-alibaba"
+	oidcTokenFilePath  = "/var/run/secrets/tokens/csi-secrets-store-provider-alibabacloud"
 )
 
 type getCredential interface {

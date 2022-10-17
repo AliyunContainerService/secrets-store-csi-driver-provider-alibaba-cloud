@@ -9,7 +9,7 @@ require (
 	github.com/alibabacloud-go/sts-20150401 v1.1.0 // indirect
 	github.com/alibabacloud-go/tea v1.1.15
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1473
-	github.com/aliyun/credentials-go v1.2.1
+	github.com/aliyun/credentials-go v1.2.2
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
 	github.com/pkg/errors v0.9.1
 	google.golang.org/grpc v1.29.1
