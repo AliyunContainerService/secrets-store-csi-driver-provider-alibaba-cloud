@@ -13,7 +13,7 @@ Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you t
 - This chart installs the [secrets-store-csi-driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver) and the Alibaba Cloud KMS Secrets Manager provider for the driver
 
 ```shell
-helm repo add csi-secrets-store-provider-alibabacloud https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud/charts
+helm repo add csi-secrets-store-provider-alibabacloud https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud/main/charts
 
 helm install csi-secrets-store-provider-alibabacloud/csi-secrets-store-provider-alibabacloud --generate-name
 ```
@@ -101,7 +101,7 @@ ack-ram-tool rrsa enable -c <clusterId>
 2. Next create the service account to be used by the pod and associate the above kms RAM policy with that service account. Here we use [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) CLI to simplify the steps of RAM role creation and authorization:
 
 ```shell
-ack-ram-tool rrsa associate-role -c <clusterId> --create-role-if-not-exist -r <roleName> -n <namespace> -s <serviceAccount>
+ack-ram-tool rrsa associate-role -c <clusterId> --create-role-if-not-exist -r <roleName> -n <namespace> -s csi-secrets-store-provider-alibabacloud
 ```
 
 3. Create a secret named `alibaba-credentials` in target cluster, create a template file below named `alibaba-credentials.yaml`:
@@ -115,13 +115,13 @@ data:
 kind: Secret
 metadata:
   name: alibaba-credentials
-  namespace: kube-system
+  namespace: <namespace>
 type: Opaque  
 ```
 
-**oidcproviderarn **: specify the cluster's OIDC provider ARN, you can obtain the value in [RAM SSO](https://ram.console.aliyun.com/providers) console, then find the target provider ARN in the `OIDC` tab.
-
-**rolearn **: specify the assumed ram role ARN, base64 encoding required
+**oidcproviderarn**: specify the cluster's OIDC provider ARN, you can obtain the value in [RAM SSO](https://ram.console.aliyun.com/providers) console, then find the target provider ARN in the `OIDC` tab, base64 encoding required
+**rolearn**: specify the assumed ram role ARN, base64 encoding required
+**namespace **: specify the namespace which will install provider
 
 Run the command to deploy secret:
 

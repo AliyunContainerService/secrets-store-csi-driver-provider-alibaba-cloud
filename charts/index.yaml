@@ -13,6 +13,6 @@ entries:
     sources:
     - https://github.com/DahuK/secrets-store-csi-driver-provider-alibaba-cloud
     urls:
-    - https://raw.githubusercontent.com/DahuK/secrets-store-csi-driver-provider-alibaba-cloud/rrsa-support/charts/csi-secrets-store-provider-alibabacloud-0.1.0.tgz
+    - https://raw.githubusercontent.com/DahuK/secrets-store-csi-driver-provider-alibaba-cloud/main/charts/csi-secrets-store-provider-alibabacloud-0.1.0.tgz
     version: 0.1.0
 generated: "2022-10-14T16:23:30.410429+08:00"
