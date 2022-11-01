@@ -70,6 +70,7 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 | `secrets-store-csi-driver.linux.registrarImage.repository`   | Linux node-driver-registrar image repository                 | `registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar` |
 | `secrets-store-csi-driver.linux.registrarImage.pullPolicy`   | Linux node-driver-registrar image pull policy                | `Always`                                                     |
 | `secrets-store-csi-driver.linux.registrarImage.tag`          | Linux node-driver-registrar image tag                        | `v2.5.0`                                                     |
+| `secrets-store-csi-driver.enableSecretRotation`              | Enable secret rotation feature [alpha]                       | `false`                                                      |
 | `secrets-store-csi-driver.rotationPollInterval`              | Secret rotation poll interval duration                       | `2m`                                                         |
 | `secrets-store-csi-driver.filteredWatchSecret`               | Enable filtered watch for NodePublishSecretRef secrets with label `secrets-store.csi.k8s.io/used=true`. Refer to [doc](https://secrets-store-csi-driver.sigs.k8s.io/load-tests.html) for more details | `true`                                                       |
 | `secrets-store-csi-driver.syncSecret.enabled`                | Enable rbac roles and bindings required for syncing to Kubernetes native secrets | `false`                                                      |
@@ -110,7 +111,7 @@ ack-ram-tool rrsa associate-role -c <clusterId> --create-role-if-not-exist -r <r
 ```yaml
 apiVersion: v1
 data:
-  oidcproviderarn: ****  
+  oidcproviderarn: ****
   rolearn: ****   #specify the assumed ram role ARN, base64 encoding required
 kind: Secret
 metadata:
@@ -133,12 +134,12 @@ kubectl apply -f alibaba-credentials.yaml
 
 ```yaml
 envVarsFromSecret:
- ALICLOUD_ROLE_ARN:
-   secretKeyRef: alibaba-credentials
-   key: rolearn
- ALICLOUD_OIDC_PROVIDER_ARN:
-   secretKeyRef: alibaba-credentials
-   key: oidcproviderarn
+  ALICLOUD_ROLE_ARN:
+    secretKeyRef: alibaba-credentials
+    key: rolearn
+  ALICLOUD_OIDC_PROVIDER_ARN:
+    secretKeyRef: alibaba-credentials
+    key: oidcproviderarn
 
 rrsa:
   # Specifies whether using rrsa and enalbe sa token volume projection, default is false

@@ -72,6 +72,7 @@ secrets-store-csi-driver:
       tag: v2.6.0
       pullPolicy: Always
 
+  enableSecretRotation: false
   rotationPollInterval: 2m
   # Refer to https://secrets-store-csi-driver.sigs.k8s.io/load-tests.html for more details on actions to take before enabling this feature
   filteredWatchSecret: true
