@@ -1,0 +1,30 @@
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: basic-test-mount-spc
+spec:
+  provider: alibabacloud
+  secretObjects:
+  - secretName: sm-secret
+    type: Opaque
+    data:
+    - objectName: testSync
+      key: username
+  - secretName: sm-secret-json
+    type: Opaque
+    data:
+      - objectName: mySecretUsername
+        key: username
+      - objectName: mySecretPassword
+        key: password
+  parameters:
+    objects: | 
+        - objectName: testBasic
+        - objectName: testSync
+        - objectName: testRotation
+        - objectName: testJson
+          jmesPath:
+            - path: "username"
+              objectAlias: "mySecretUsername"
+            - path: "password"
+              objectAlias: "mySecretPassword"

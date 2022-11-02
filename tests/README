@@ -1,0 +1,5 @@
+Running prow tests
+
+1. ./init-env.sh --cluster-id xxxxxxx
+2. Install bats - https://github.com/bats-core/bats-core
+3. KUBECONFIG='/tmp/config' bats alibabacloud.bats
