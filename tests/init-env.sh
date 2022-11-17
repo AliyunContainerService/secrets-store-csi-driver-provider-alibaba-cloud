@@ -23,8 +23,8 @@ install_env() {
     set -e
 
     #rrsa config
-    ack-ram-tool rrsa enable -c $cluster_id
-    ack-ram-tool rrsa associate-role -c $cluster_id --create-role-if-not-exist -r csi-secret-driver-provider-rrsa -n kube-system -s csi-secrets-store-provider-alibabacloud
+    ack-ram-tool rrsa enable -c $cluster_id --assume-yes
+    ack-ram-tool rrsa associate-role -c $cluster_id --create-role-if-not-exist -r csi-secret-driver-provider-rrsa -n kube-system -s csi-secrets-store-provider-alibabacloud --assume-yes
 }
 
 

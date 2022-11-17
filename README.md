@@ -38,8 +38,8 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 | `envVarsFromSecret.ALICLOUD_ROLE_SESSION_EXPIRATION`         | Set the ALICLOUD_ROLE_SESSION_NAME variable to specify the RAM role session expiration for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
 | `envVarsFromSecret. ALICLOUD_OIDC_PROVIDER_ARN`              | Set the ALICLOUD_OIDC_PROVIDER_ARN variable to specify the RAM OIDC  provider arn for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
 | `envVarsFromSecret.ALICLOUD_OIDC_TOKEN_FILE`                 | Set the ALICLOUD_OIDC_TOKEN_FILE variable to specify the serviceaccount OIDC token file path for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                              |
-| rrsa.enable                                                  | Enable RRSA feature, default is false，when enalbe, you need to configure the parametes of  `ALICLOUD_ROLE_ARN` and `ALICLOUD_OIDC_PROVIDER_ARN`  in `envVarsFromSecret` | false                                                        |
-| `linux.enabled`                                              | Install alibabacloud keyvault provider on linux nodes        | true                                                         |
+| `rrsa.enable`                                                | Enable RRSA feature, default is false，when enalbe, you need to configure the parametes of  `ALICLOUD_ROLE_ARN` and `ALICLOUD_OIDC_PROVIDER_ARN`  in `envVarsFromSecret` | false                                                        |
+| `linux.enabled`                                              | Install alibabacloud provider on linux nodes                 | true                                                         |
 | `linux.image.repository`                                     | Linux image repository                                       | `registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud` |
 | `linux.image.pullPolicy`                                     | Linux image pull policy                                      | `Always`                                                     |
 | `linux.image.tag`                                            | Alibaba Cloud Secrets Manager Provider Linux image tag       | `v1.1.0`                                                     |
@@ -53,8 +53,8 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 | `linux.healthzPort`                                          | port for health check                                        | `"8989"`                                                     |
 | `linux.healthzPath`                                          | path for health check                                        | `"/healthz"`                                                 |
 | `linux.healthzTimeout`                                       | RPC timeout for health check                                 | `"5s"`                                                       |
-| `linux.volumes`                                              | Additional volumes to create for the KeyVault provider pods. | `[]`                                                         |
-| `linux.volumeMounts`                                         | Additional volumes to mount on the KeyVault provider pods.   | `[]`                                                         |
+| `linux.volumes`                                              | Additional volumes to create for the provider pods.          | `[]`                                                         |
+| `linux.volumeMounts`                                         | Additional volumes to mount on the provider pods.            | `[]`                                                         |
 | `linux.affinity`                                             | Configures affinity for provider pods on linux nodes         | Match expression `type NotIn virtual-kubelet`                |
 | `linux.kubeletRootDir`                                       | Configure the kubelet root dir                               | `/var/lib/kubelet`                                           |
 | `linux.providersDir`                                         | Configure the providers root dir                             | `/var/run/secrets-store-csi-providers`                       |
@@ -191,7 +191,7 @@ The parameters section contains the details of the mount request and contain one
         objects: |
             - objectName: "MySecret"
     ```
-* region: An optional field to specify the Alibaba Cloud region to use when retrieving secrets from Secrets Manager or Parameter Store. If this field is missing, the provider will lookup the region from the annotation on the node. This lookup adds overhead to mount requests so clusters using large numbers of pods will benefit from providing the region here.
+* region: An optional field to specify the Alibaba Cloud region to use when retrieving secrets from Secrets Manage. If this field is missing, the provider will lookup the region from the annotation on the node. This lookup adds overhead to mount requests so clusters using large numbers of pods will benefit from providing the region here.
 * pathTranslation: An optional field to specify a substitution character to use when the path separator character (slash on Linux) is used in the file name. If a Secret or parameter name contains the path separator failures will occur when the provider tries to create a mounted file using the name. When not specified the underscore character is used, thus My/Path/Secret will be mounted as My_Path_Secret. This pathTranslation value can either be the string "False" or a single character string. When set to "False", no character substitution is performed.
 
 The objects field of the SecretProviderClass can contain the following sub-fields:

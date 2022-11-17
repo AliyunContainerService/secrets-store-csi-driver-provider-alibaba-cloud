@@ -1,11 +1,14 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/aliyun/credentials-go/credentials"
 	"k8s.io/klog/v2"
 	"os"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -116,6 +119,42 @@ func (c *akAuth) NewCredential() (credentials.Credential, error) {
 	return cred, err
 }
 
+type nodePublishSecretAuth struct{ *authConfig }
+
+func (c *nodePublishSecretAuth) NewCredential() (credentials.Credential, error) {
+	if c.nodePublishSecret == "" {
+		return nil, nil
+	}
+	// The secrets here are the relevant CSI driver (k8s) secrets. See
+	// https://kubernetes-csi.github.io/docs/secrets-and-credentials-storage-class.html
+	var secret map[string]string
+	if err := json.Unmarshal([]byte(c.nodePublishSecret), &secret); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal secrets: %v", err)
+	}
+	var ak, sk string
+	for k, v := range secret {
+		switch strings.ToLower(k) {
+		case "access_key":
+			ak = v
+		case "access_secret":
+			sk = v
+		}
+	}
+	//use ak auth type if ak/sk has set in cluster secret
+	if ak == "" || sk == "" {
+		return nil, nil
+	}
+	config := new(credentials.Config).
+		SetType(AKAuthType).
+		SetAccessKeyId(ak).
+		SetAccessKeySecret(sk)
+	cred, err := credentials.NewCredential(config)
+	if cred != nil {
+		klog.Info("Using node publish secret auth..")
+	}
+	return cred, err
+}
+
 type ecsRoleAuth struct{ *authConfig }
 
 func (c *ecsRoleAuth) NewCredential() (credentials.Credential, error) {
@@ -136,9 +175,10 @@ type authConfig struct {
 	accessSecretKey       string
 	roleSessionName       string
 	roleSessionExpiration string
+	nodePublishSecret     string
 }
 
-func GetKMSAuthCred() (credentials.Credential, error) {
+func GetKMSAuthCred(secrets string) (credentials.Credential, error) {
 	aConfig := &authConfig{
 		roleArn:               os.Getenv("ALICLOUD_ROLE_ARN"),
 		oidcArn:               os.Getenv("ALICLOUD_OIDC_PROVIDER_ARN"),
@@ -146,9 +186,11 @@ func GetKMSAuthCred() (credentials.Credential, error) {
 		accessSecretKey:       os.Getenv("SECRET_ACCESS_KEY"),
 		roleSessionName:       os.Getenv("ALICLOUD_ROLE_SESSION_NAME"),
 		roleSessionExpiration: os.Getenv("ALICLOUD_ROLE_SESSION_EXPIRATION"),
+		nodePublishSecret:     secrets,
 	}
 	root := chainedAuth{cred: &oidcRoleAuth{authConfig: aConfig}}
 	root.authNext(&chainedAuth{cred: &ramRoleAuth{authConfig: aConfig}}).
+		authNext(&chainedAuth{cred: &nodePublishSecretAuth{authConfig: aConfig}}).
 		authNext(&chainedAuth{cred: &akAuth{authConfig: aConfig}}).
 		authNext(&chainedAuth{cred: &ecsRoleAuth{authConfig: aConfig}})
 	return root.NewCredential()
