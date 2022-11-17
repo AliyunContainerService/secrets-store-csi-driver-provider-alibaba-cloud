@@ -96,7 +96,7 @@ func (s *CSIDriverProviderServer) Mount(ctx context.Context, req *v1alpha1.Mount
 	}
 
 	// Get the pod's Alibaba Cloud creds.
-	cred, err := auth.GetKMSAuthCred()
+	cred, err := auth.GetKMSAuthCred(req.GetSecrets())
 	if err != nil {
 		return nil, err
 	}
