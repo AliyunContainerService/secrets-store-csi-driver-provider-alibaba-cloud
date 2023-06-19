@@ -60,16 +60,16 @@ secrets-store-csi-driver:
     metricsAddr: ":8080"
     image:
       repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-driver
-      tag: v1.1.2
+      tag: v1.3.4
       pullPolicy: Always
     providersDir: /var/run/secrets-store-csi-providers
     registrarImage:
       repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar
-      tag: v2.5.0
+      tag: v2.8.0
       pullPolicy: Always
     livenessProbeImage:
       repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-livenessprobe
-      tag: v2.6.0
+      tag: v2.10.0
       pullPolicy: Always
 
   enableSecretRotation: false
