@@ -39,7 +39,11 @@ func TestServe(t *testing.T) {
 				s := grpc.NewServer()
 				k8spb.RegisterCSIDriverProviderServer(s, &CSIDriverProviderServer{})
 				grpc_health_v1.RegisterHealthServer(s, &CSIDriverProviderServer{})
-				go s.Serve(listener)
+				go func() {
+					if err := s.Serve(listener); err != nil {
+						t.Errorf("failed to serve health server: %v", err)
+					}
+				}()
 			},
 			expectedHTTPStatusCode: http.StatusOK,
 		},
@@ -88,7 +92,11 @@ func TestCheckRPC(t *testing.T) {
 	s := grpc.NewServer()
 	k8spb.RegisterCSIDriverProviderServer(s, &CSIDriverProviderServer{})
 	grpc_health_v1.RegisterHealthServer(s, &CSIDriverProviderServer{})
-	go s.Serve(listener)
+	go func() {
+		if err := s.Serve(listener); err != nil {
+			t.Errorf("failed to serve health server: %v", err)
+		}
+	}()
 
 	healthz := &HealthZ{
 		UnixSocketPath: socketPath,

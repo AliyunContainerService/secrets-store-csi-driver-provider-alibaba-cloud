@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/utils"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	t "log"
 	"net"
 	"net/url"
 	"os"
@@ -83,7 +84,11 @@ func main() {
 
 	klog.Infof("Listening for connections on address: %s", listener.Addr())
 
-	go grpcSrv.Serve(listener)
+	go func() {
+		if err := grpcSrv.Serve(listener); err != nil {
+			t.Fatalf("failed to serve provider server: %v", err)
+		}
+	}()
 
 	healthz := &server.HealthZ{
 		HealthCheckURL: &url.URL{

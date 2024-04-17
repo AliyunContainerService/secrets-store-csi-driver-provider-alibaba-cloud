@@ -248,6 +248,9 @@ When evaluating this plugin consider the following threats:
 
 For these reasons, *when possible* we recommend using the [Secrets Manager API](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets) directly.
 
+## Security
+Please report vulnerabilities by email to **kubernetes-security@service.aliyun.com**. Also see our [SECURITY.md](./SECURITY.md) file for details.
+
 ## License
 
 This project is licensed under the Apache-2.0 License.
