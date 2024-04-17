@@ -1,4 +1,4 @@
-FROM golang:1.16.12 as builder
+FROM golang:1.22.2 as builder
 ENV GO111MODULE off
 WORKDIR /go/src/github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud
 COPY . .
