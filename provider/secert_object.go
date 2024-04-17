@@ -12,7 +12,7 @@ import (
 )
 
 // An RE pattern to check for bad paths
-var badPathRE = regexp.MustCompile("(/\\.\\./)|(^\\.\\./)|(/\\.\\.$)")
+var badPathRE = regexp.MustCompile("(/../)|(^../)|(/..$)")
 
 // An individual record from the mount request indicating the secret to be
 // fetched and mounted.

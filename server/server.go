@@ -31,9 +31,6 @@ const (
 	transAttrib      = "pathTranslation" // Path translation char
 	secProvAttrib    = "objects"         // The attributed used to pass the SecretProviderClass definition (with what to mount)
 	defaultKmsDomain = "kms-vpc.%s.aliyuncs.com"
-	//MetadataURL is the ECS metadata server addr
-	metadataURL = "http://100.100.100.200/latest/meta-data/"
-	regionID    = "region-id"
 )
 
 // A Secrets Store CSI Driver provider implementation for Alibaba Cloud Secrets Manager.
@@ -119,7 +116,7 @@ func (s *CSIDriverProviderServer) Mount(ctx context.Context, req *v1alpha1.Mount
 	if err != nil {
 		return nil, err
 	}
-	smProvider := provider.SecretsManagerProvider{kmsClient}
+	smProvider := provider.SecretsManagerProvider{KmsClient: kmsClient}
 	// Fetch all secrets before saving so we write nothing on failure.
 	var fetchedSecrets []*provider.SecretValue
 	secrets, err := smProvider.GetSecretValues(descriptors, curVerMap)

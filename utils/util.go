@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -48,7 +47,7 @@ func Retry(interval time.Duration, maxRetries int, f ConditionFunc) error {
 		}
 		<-tick.C
 	}
-	return errors.New(fmt.Sprintf("still failing after %d retries", maxRetries))
+	return fmt.Errorf("still failing after %d retries", maxRetries)
 }
 
 func Contains(list []string, s string) bool {

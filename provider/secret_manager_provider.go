@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	MAX_RETRY_TIMES               = 5
 	REJECTED_THROTTLING           = "Rejected.Throttling"
 	SERVICE_UNAVAILABLE_TEMPORARY = "ServiceUnavailableTemporary"
 	INTERNAL_FAILURE              = "InternalFailure"
@@ -131,21 +130,18 @@ func (smp *SecretsManagerProvider) fetchSecret(secObj *SecretObject) (ver string
 		request.VersionStage = tea.String(secObj.ObjectVersionLabel)
 	}
 	response, err := smp.KmsClient.GetSecretValue(request)
-	for retryTimes := 1; retryTimes < MAX_RETRY_TIMES; retryTimes++ {
-		if err != nil {
-			if !judgeNeedRetry(err) {
+	if err != nil {
+		if !judgeNeedRetry(err) {
+			klog.Error(err, "failed to get secret value from kms", "key", secObj.ObjectName)
+			return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
+		} else {
+			time.Sleep(getWaitTimeExponential(1))
+			response, err = smp.KmsClient.GetSecretValue(request)
+			if err != nil {
 				klog.Error(err, "failed to get secret value from kms", "key", secObj.ObjectName)
 				return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
-			} else {
-				time.Sleep(getWaitTimeExponential(retryTimes))
-				response, err = smp.KmsClient.GetSecretValue(request)
-				if err != nil && retryTimes == MAX_RETRY_TIMES-1 {
-					klog.Error(err, "failed to get secret value from kms", "key", secObj.ObjectName)
-					return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
-				}
 			}
 		}
-		break
 	}
 	if *response.Body.SecretDataType == utils.BinaryType {
 		klog.Error(err, "not support binary type yet", "key", secObj.ObjectName)
