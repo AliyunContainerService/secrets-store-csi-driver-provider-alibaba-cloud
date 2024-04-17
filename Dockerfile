@@ -4,7 +4,7 @@ WORKDIR /go/src/github.com/AliyunContainerService/secrets-store-csi-driver-provi
 COPY . .
 RUN make build
 
-FROM alpine:3.11.6
+FROM alpine:3.19.1
 WORKDIR /bin
 
 RUN apk update && apk upgrade
