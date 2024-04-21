@@ -24,10 +24,10 @@ spec:
       hostNetwork: true
       containers:
         - name: provider-alibabacloud-installer
-          image: registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-provider-alibabacloud:v0.1.0
+          image: registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud:v0.1.0
           imagePullPolicy: IfNotPresent
           args:
-            - --endpoint=unix:///provider/alibabacloud.sock
+            - --provider-volume=/provider
             - --healthz-port=8989
             - --healthz-path=/healthz
             - --healthz-timeout=5s
