@@ -2,8 +2,28 @@ apiVersion: v1
 entries:
   csi-secrets-store-provider-alibabacloud:
   - apiVersion: v1
+    appVersion: 0.3.0
+    created: "2024-11-27T16:28:49.3196364+08:00"
+    description: A Helm chart to install the Secrets Store CSI Driver, the Alibaba
+      Cloud KMS Secret Manager and OOS Eencrypted Parameter Provider inside a Kubernetes
+      cluster.
+    digest: 52ff9d0209df271bd5a261ac0a81c6a7086a51b6a98499913ef9d258a27560c4
+    home: https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/charts
+    keywords:
+    - releaseName:csi-secrets-store-provider-alibabacloud
+    - arch:amd64
+    - namespace:kube-system
+    - supportType:ExternalKubernetes,Kubernetes,ManagedKubernetes
+    kubeVersion: '>=1.16.0-0'
+    name: csi-secrets-store-provider-alibabacloud
+    sources:
+    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud
+    urls:
+    - https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/main/charts/csi-secrets-store-provider-alibabacloud-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v1
     appVersion: 0.2.0
-    created: "2023-06-19T15:59:18.815766+08:00"
+    created: "2024-11-27T16:28:49.3175869+08:00"
     description: A Helm chart to install the Secrets Store CSI Driver and the Alibaba
       Cloud KMS Secret Manager Provider inside a Kubernetes cluster.
     digest: 9d26d57d2e551be3ef0c15efcf22e01cad45f6011f970f624ae78c9c1d9a9382
@@ -17,7 +37,7 @@ entries:
     version: 0.2.0
   - apiVersion: v1
     appVersion: 0.1.0
-    created: "2023-06-19T15:59:18.811955+08:00"
+    created: "2024-11-27T16:28:49.315417+08:00"
     description: A Helm chart to install the Secrets Store CSI Driver and the Alibaba
       Cloud KMS Secret Manager Provider inside a Kubernetes cluster.
     digest: 94b65d1ede3dc3143d8385ad76446a8140fd50dc0cf8ce85e088aa2c14e83302
@@ -29,4 +49,4 @@ entries:
     urls:
     - https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/main/charts/csi-secrets-store-provider-alibabacloud-0.1.0.tgz
     version: 0.1.0
-generated: "2023-06-19T15:59:18.810129+08:00"
+generated: "2024-11-27T16:28:49.3137425+08:00"

@@ -1,16 +1,19 @@
 package provider
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
+	"math"
+	"time"
+
 	"github.com/AliyunContainerService/ack-secret-manager/pkg/utils"
 	kms "github.com/alibabacloud-go/kms-20160120/v2/client"
+	oos "github.com/alibabacloud-go/oos-20190601/v4/client"
 	"github.com/alibabacloud-go/tea/tea"
 	sdkErr "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
-	"io/ioutil"
 	"k8s.io/klog/v2"
-	"math"
 	"sigs.k8s.io/secrets-store-csi-driver/provider/v1alpha1"
-	"time"
 )
 
 const (
@@ -24,8 +27,21 @@ var (
 	BACKOFF_DEFAULT_CAPACITY       = time.Duration(10) * time.Second
 )
 
+const (
+	ObjectTypeKMS = "kms"
+	ObjectTypeOOS = "oos"
+)
+
+type Limiter struct {
+	Kms KmsLimiter
+	OOS OosLimiter
+}
+
+var LimiterInstance Limiter
+
 type SecretsManagerProvider struct {
 	KmsClient *kms.Client
+	OosClient *oos.Client
 }
 
 type SecretFile struct {
@@ -117,9 +133,34 @@ func (p *SecretsManagerProvider) isCurrent(
 //
 // This method builds up the GetSecretValue request using the objectName from
 // the request and any objectVersion or objectVersionLabel parameters.
-//
 func (smp *SecretsManagerProvider) fetchSecret(secObj *SecretObject) (ver string, val *SecretValue, e error) {
+	waitTimeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	switch secObj.ObjectType {
+	case ObjectTypeKMS, "":
+		err := LimiterInstance.Kms.Wait(waitTimeoutCtx)
+		if err != nil {
+			return "", nil, err
+		}
+		if smp.KmsClient == nil {
+			return "", nil, fmt.Errorf("kms client is empty")
+		}
+		return getKMSSecret(smp.KmsClient, secObj)
+	case ObjectTypeOOS:
+		err := LimiterInstance.OOS.Wait(waitTimeoutCtx)
+		if err != nil {
+			return "", nil, err
+		}
+		if smp.OosClient == nil {
+			return "", nil, fmt.Errorf("oos client is empty")
+		}
+		return getOOSSecret(smp.OosClient, secObj)
+	default:
+		return "", nil, fmt.Errorf("Secret type  %s not support. Only support kms and oos", secObj.ObjectType)
+	}
+}
 
+func getKMSSecret(c *kms.Client, secObj *SecretObject) (string, *SecretValue, error) {
 	request := &kms.GetSecretValueRequest{
 		SecretName: tea.String(secObj.ObjectName),
 	}
@@ -129,14 +170,15 @@ func (smp *SecretsManagerProvider) fetchSecret(secObj *SecretObject) (ver string
 	if secObj.ObjectVersionLabel != "" {
 		request.VersionStage = tea.String(secObj.ObjectVersionLabel)
 	}
-	response, err := smp.KmsClient.GetSecretValue(request)
+	response, err := c.GetSecretValue(request)
 	if err != nil {
+		klog.Error(err, "failed to get %s secret value from kms, err = %s", secObj.ObjectName, err.Error())
 		if !judgeNeedRetry(err) {
 			klog.Error(err, "failed to get secret value from kms", "key", secObj.ObjectName)
 			return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
 		} else {
 			time.Sleep(getWaitTimeExponential(1))
-			response, err = smp.KmsClient.GetSecretValue(request)
+			response, err = c.GetSecretValue(request)
 			if err != nil {
 				klog.Error(err, "failed to get secret value from kms", "key", secObj.ObjectName)
 				return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
@@ -148,7 +190,36 @@ func (smp *SecretsManagerProvider) fetchSecret(secObj *SecretObject) (ver string
 		return "", nil, fmt.Errorf("Secret type not support at %s: %s", secObj.ObjectName, err.Error())
 
 	}
+
 	return *response.Body.VersionId, &SecretValue{Value: []byte(*response.Body.SecretData), SecretObj: *secObj}, nil
+}
+
+func getOOSSecret(c *oos.Client, secObj *SecretObject) (string, *SecretValue, error) {
+	request := &oos.GetSecretParameterRequest{
+		Name:           tea.String(secObj.ObjectName),
+		WithDecryption: tea.Bool(true),
+	}
+	response, err := c.GetSecretParameter(request)
+	if err != nil {
+		if !judgeNeedRetry(err) {
+			klog.Error(err, "failed to get secret value from oos", "key", secObj.ObjectName)
+			return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
+		} else {
+			time.Sleep(getWaitTimeExponential(1))
+			response, err = c.GetSecretParameter(request)
+			if err != nil {
+				klog.Error(err, "failed to get secret value from oos", "key", secObj.ObjectName)
+				return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
+			}
+		}
+	}
+	if *response.Body.Parameter.Value == utils.BinaryType {
+		klog.Error(err, "not support binary type yet", "key", secObj.ObjectName)
+		return "", nil, fmt.Errorf("Secret type not support at %s: %s", secObj.ObjectName, err.Error())
+
+	}
+
+	return "v1", &SecretValue{Value: []byte(*response.Body.Parameter.Value), SecretObj: *secObj}, nil
 }
 
 func judgeNeedRetry(err error) bool {
