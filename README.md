@@ -1,8 +1,6 @@
-
-
 # Alibaba Cloud Secrets Manager for Secret Store CSI Driver
 
-Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you to get secret contents stored in [Alibaba Cloud Secrets Manager](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets-manager-overview)  and use the Secrets Store CSI driver interface to mount them into Kubernetes pods.
+Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you to get secret contents stored in [Alibaba Cloud Secrets Manager](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets-manager-overview) or [Alibaba Cloud OOS Encrypted Parameter](https://www.alibabacloud.com/help/en/oos/getting-started/manage-encryption-parameters), and use the Secrets Store CSI driver interface to mount them into Kubernetes pods.
 
 ### Prerequisites
 
@@ -24,89 +22,104 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 
 > Refer to [doc](https://github.com/kubernetes-sigs/secrets-store-csi-driver/tree/master/charts/secrets-store-csi-driver/README.md) for configurable parameters of the secrets-store-csi-driver chart.
 
-| Parameter                                                    | Description                                                  | Default                                                                                         |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |-------------------------------------------------------------------------------------------------|
-| `nameOverride`                                               | String to partially override csi-secrets-store-provider-alibabacloud.fullname template with a string (will prepend the release name) | `""`                                                                                            |
-| `fullnameOverride`                                           | String to fully override csi-secrets-store-provider-alibabacloud.fullname template with a string | `""`                                                                                            |
-| `imagePullSecrets`                                           | Secrets to be used when pulling images                       | `[]`                                                                                            |
-| `logFormatJSON`                                              | Use JSON logging format                                      | `false`                                                                                         |
-| `logVerbosity`                                               | Log level. Uses V logs (klog)                                | `0`                                                                                             |
-| `envVarsFromSecret.ACCESS_KEY_ID`                            | Set the ACCESS_KEY_ID variable to specify the credential RAM AK for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                                                                 |
-| `envVarsFromSecret.SECRET_ACCESS_KEY`                        | Set the SECRET_ACCESS_KEY variable to specify the credential RAM SK for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                                                                 |
-| `envVarsFromSecret.ALICLOUD_ROLE_ARN`                        | Set the ALICLOUD_ROLE_ARN variable to specify the RAM role ARN for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                                                                 |
-| `envVarsFromSecret.ALICLOUD_ROLE_SESSION_NAME`               | Set the ALICLOUD_ROLE_SESSION_NAME variable to specify the RAM role session name for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                                                                 |
-| `envVarsFromSecret.ALICLOUD_ROLE_SESSION_EXPIRATION`         | Set the ALICLOUD_ROLE_SESSION_NAME variable to specify the RAM role session expiration for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                                                                 |
-| `envVarsFromSecret. ALICLOUD_OIDC_PROVIDER_ARN`              | Set the ALICLOUD_OIDC_PROVIDER_ARN variable to specify the RAM OIDC  provider arn for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                                                                 |
-| `envVarsFromSecret.ALICLOUD_OIDC_TOKEN_FILE`                 | Set the ALICLOUD_OIDC_TOKEN_FILE variable to specify the serviceaccount OIDC token file path for building SDK client, which needs to be defined in the secret named **alibaba-credentials** |                                                                                                 |
-| `rrsa.enable`                                                | Enable RRSA feature, default is false，when enalbe, you need to configure the parametes of  `ALICLOUD_ROLE_ARN` and `ALICLOUD_OIDC_PROVIDER_ARN`  in `envVarsFromSecret` | false                                                                                           |
-| `linux.enabled`                                              | Install alibabacloud provider on linux nodes                 | true                                                                                            |
-| `linux.image.repository`                                     | Linux image repository                                       | `registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud`         |
-| `linux.image.pullPolicy`                                     | Linux image pull policy                                      | `Always`                                                                                        |
-| `linux.image.tag`                                            | Alibaba Cloud Secrets Manager Provider Linux image tag       | `v1.1.0`                                                                                        |
-| `linux.nodeSelector`                                         | Node Selector for the daemonset on linux nodes               | `{}`                                                                                            |
-| `linux.tolerations`                                          | Tolerations for the daemonset on linux nodes                 | `{}`                                                                                            |
-| `linux.resources`                                            | Resource limit for provider pods on linux nodes              | `requests.cpu: 50m`<br>`requests.memory: 100Mi`<br>`limits.cpu: 100m`<br>`limits.memory: 500Mi` |
-| `linux.podLabels`                                            | Additional pod labels                                        | `{}`                                                                                            |
-| `linux.podAnnotations`                                       | Additional pod annotations                                   | `{}`                                                                                            |
-| `linux.priorityClassName`                                    | Indicates the importance of a Pod relative to other Pods.    | `""`                                                                                            |
-| `linux.updateStrategy`                                       | Configure a custom update strategy for the daemonset on linux nodes | `RollingUpdate with 1 maxUnavailable`                                                           |
-| `linux.healthzPort`                                          | port for health check                                        | `"8989"`                                                                                        |
-| `linux.healthzPath`                                          | path for health check                                        | `"/healthz"`                                                                                    |
-| `linux.healthzTimeout`                                       | RPC timeout for health check                                 | `"5s"`                                                                                          |
-| `linux.volumes`                                              | Additional volumes to create for the provider pods.          | `[]`                                                                                            |
-| `linux.volumeMounts`                                         | Additional volumes to mount on the provider pods.            | `[]`                                                                                            |
-| `linux.affinity`                                             | Configures affinity for provider pods on linux nodes         | Match expression `type NotIn virtual-kubelet`                                                   |
-| `linux.kubeletRootDir`                                       | Configure the kubelet root dir                               | `/var/lib/kubelet`                                                                              |
-| `linux.providersDir`                                         | Configure the providers root dir                             | `/var/run/secrets-store-csi-providers`                                                          |
-| `secrets-store-csi-driver.install`                           | Install secrets-store-csi-driver with this chart             | true                                                                                            |
-| `secrets-store-csi-driver.fullnameOverride`                  | String to fully override secrets-store-csi-driver.fullname template with a string | `secrets-store-csi-driver`                                                                      |
-| `secrets-store-csi-driver.linux.enabled`                     | Install secrets-store-csi-driver on linux nodes              | true                                                                                            |
-| `secrets-store-csi-driver.linux.image.repository`            | Driver Linux image repository                                | ` registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-driver`                               |
-| `secrets-store-csi-driver.linux.image.pullPolicy`            | Driver Linux image pull policy                               | `Always`                                                                                        |
-| `secrets-store-csi-driver.linux.image.tag`                   | Driver Linux image tag                                       | `v1.3.4`                                                                                        |
-| `secrets-store-csi-driver.linux.livenessProbeImage.repository` | Linux liveness-probe image repository                        | `registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-livenessprobe`                         |
-| `secrets-store-csi-driver.linux.livenessProbeImage.pullPolicy` | Linux liveness-probe image pull policy                       | `Always`                                                                                        |
-| `secrets-store-csi-driver.linux.livenessProbeImage.tag`      | Linux liveness-probe image tag                               | `v2.10.0`                                                                                       |
-| `secrets-store-csi-driver.linux.registrarImage.repository`   | Linux node-driver-registrar image repository                 | `registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar`                               |
-| `secrets-store-csi-driver.linux.registrarImage.pullPolicy`   | Linux node-driver-registrar image pull policy                | `Always`                                                                                        |
-| `secrets-store-csi-driver.linux.registrarImage.tag`          | Linux node-driver-registrar image tag                        | `v2.8.0`                                                                                        |
-| `secrets-store-csi-driver.enableSecretRotation`              | Enable secret rotation feature [alpha]                       | `false`                                                                                         |
-| `secrets-store-csi-driver.rotationPollInterval`              | Secret rotation poll interval duration                       | `2m`                                                                                            |
-| `secrets-store-csi-driver.filteredWatchSecret`               | Enable filtered watch for NodePublishSecretRef secrets with label `secrets-store.csi.k8s.io/used=true`. Refer to [doc](https://secrets-store-csi-driver.sigs.k8s.io/load-tests.html) for more details | `true`                                                                                          |
-| `secrets-store-csi-driver.syncSecret.enabled`                | Enable rbac roles and bindings required for syncing to Kubernetes native secrets | `false`                                                                                         |
-| `rbac.install`                                               | Install default service account                              | true                                                                                            |
+| Parameter                                                        | Description                                                                                                                                                                                          | Default                                                                                           |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `nameOverride`                                                 | String to partially override csi-secrets-store-provider-alibabacloud.fullname template with a string (will prepend the release name)                                                                 | `""`                                                                                            |
+| `fullnameOverride`                                             | String to fully override csi-secrets-store-provider-alibabacloud.fullname template with a string                                                                                                     | `""`                                                                                            |
+| `imagePullSecrets`                                             | Secrets to be used when pulling images                                                                                                                                                               | `[]`                                                                                            |
+| `logFormatJSON`                                                | Use JSON logging format                                                                                                                                                                              | `false`                                                                                         |
+| `logVerbosity`                                                 | Log level. Uses V logs (klog)                                                                                                                                                                        | `0`                                                                                             |
+| `envVarsFromSecret.ACCESS_KEY_ID`                              | Set the ACCESS_KEY_ID variable to specify the credential RAM AK for building SDK client, which needs to be defined in the secret named**alibaba-credentials**                                  |                                                                                                   |
+| `envVarsFromSecret.SECRET_ACCESS_KEY`                          | Set the SECRET_ACCESS_KEY variable to specify the credential RAM SK for building SDK client, which needs to be defined in the secret named**alibaba-credentials**                              |                                                                                                   |
+| `envVarsFromSecret.ALICLOUD_ROLE_ARN`                          | Set the ALICLOUD_ROLE_ARN variable to specify the RAM role ARN for building SDK client, which needs to be defined in the secret named**alibaba-credentials**                                   |                                                                                                   |
+| `envVarsFromSecret.ALICLOUD_ROLE_SESSION_NAME`                 | Set the ALICLOUD_ROLE_SESSION_NAME variable to specify the RAM role session name for building SDK client, which needs to be defined in the secret named**alibaba-credentials**                 |                                                                                                   |
+| `envVarsFromSecret.ALICLOUD_ROLE_SESSION_EXPIRATION`           | Set the ALICLOUD_ROLE_SESSION_NAME variable to specify the RAM role session expiration for building SDK client, which needs to be defined in the secret named**alibaba-credentials**           |                                                                                                   |
+| `envVarsFromSecret. ALICLOUD_OIDC_PROVIDER_ARN`                | Set the ALICLOUD_OIDC_PROVIDER_ARN variable to specify the RAM OIDC  provider arn for building SDK client, which needs to be defined in the secret named**alibaba-credentials**                |                                                                                                   |
+| `envVarsFromSecret.ALICLOUD_OIDC_TOKEN_FILE`                   | Set the ALICLOUD_OIDC_TOKEN_FILE variable to specify the serviceaccount OIDC token file path for building SDK client, which needs to be defined in the secret named**alibaba-credentials**     |                                                                                                   |
+| `rrsa.enable`                                                  | Enable RRSA feature, default is false，when enalbe, you need to configure the parametes of `ALICLOUD_ROLE_ARN` and `ALICLOUD_OIDC_PROVIDER_ARN`  in `envVarsFromSecret`                        | false                                                                                             |
+| `linux.enabled`                                                | Install alibabacloud provider on linux nodes                                                                                                                                                         | true                                                                                              |
+| `linux.image.repository`                                       | Linux image repository                                                                                                                                                                               | `registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud`         |
+| `linux.image.pullPolicy`                                       | Linux image pull policy                                                                                                                                                                              | `Always`                                                                                        |
+| `linux.image.tag`                                              | Alibaba Cloud Secrets Manager Provider Linux image tag                                                                                                                                               | `v1.1.0`                                                                                        |
+| `linux.nodeSelector`                                           | Node Selector for the daemonset on linux nodes                                                                                                                                                       | `{}`                                                                                            |
+| `linux.tolerations`                                            | Tolerations for the daemonset on linux nodes                                                                                                                                                         | `{}`                                                                                            |
+| `linux.resources`                                              | Resource limit for provider pods on linux nodes                                                                                                                                                      | `requests.cpu: 50m<br>``requests.memory: 100Mi<br>``limits.cpu: 100m<br>``limits.memory: 500Mi` |
+| `linux.podLabels`                                              | Additional pod labels                                                                                                                                                                                | `{}`                                                                                            |
+| `linux.podAnnotations`                                         | Additional pod annotations                                                                                                                                                                           | `{}`                                                                                            |
+| `linux.priorityClassName`                                      | Indicates the importance of a Pod relative to other Pods.                                                                                                                                            | `""`                                                                                            |
+| `linux.updateStrategy`                                         | Configure a custom update strategy for the daemonset on linux nodes                                                                                                                                  | `RollingUpdate with 1 maxUnavailable`                                                           |
+| `linux.healthzPort`                                            | port for health check                                                                                                                                                                                | `"8989"`                                                                                        |
+| `linux.healthzPath`                                            | path for health check                                                                                                                                                                                | `"/healthz"`                                                                                    |
+| `linux.healthzTimeout`                                         | RPC timeout for health check                                                                                                                                                                         | `"5s"`                                                                                          |
+| `linux.volumes`                                                | Additional volumes to create for the provider pods.                                                                                                                                                  | `[]`                                                                                            |
+| `linux.volumeMounts`                                           | Additional volumes to mount on the provider pods.                                                                                                                                                    | `[]`                                                                                            |
+| `linux.affinity`                                               | Configures affinity for provider pods on linux nodes                                                                                                                                                 | Match expression `type NotIn virtual-kubelet`                                                   |
+| `linux.kubeletRootDir`                                         | Configure the kubelet root dir                                                                                                                                                                       | `/var/lib/kubelet`                                                                              |
+| `linux.providersDir`                                           | Configure the providers root dir                                                                                                                                                                     | `/var/run/secrets-store-csi-providers`                                                          |
+| `secrets-store-csi-driver.install`                             | Install secrets-store-csi-driver with this chart                                                                                                                                                     | true                                                                                              |
+| `secrets-store-csi-driver.fullnameOverride`                    | String to fully override secrets-store-csi-driver.fullname template with a string                                                                                                                    | `secrets-store-csi-driver`                                                                      |
+| `secrets-store-csi-driver.linux.enabled`                       | Install secrets-store-csi-driver on linux nodes                                                                                                                                                      | true                                                                                              |
+| `secrets-store-csi-driver.linux.image.repository`              | Driver Linux image repository                                                                                                                                                                        | ` registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-driver`                               |
+| `secrets-store-csi-driver.linux.image.pullPolicy`              | Driver Linux image pull policy                                                                                                                                                                       | `Always`                                                                                        |
+| `secrets-store-csi-driver.linux.image.tag`                     | Driver Linux image tag                                                                                                                                                                               | `v1.3.4`                                                                                        |
+| `secrets-store-csi-driver.linux.livenessProbeImage.repository` | Linux liveness-probe image repository                                                                                                                                                                | `registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-livenessprobe`                         |
+| `secrets-store-csi-driver.linux.livenessProbeImage.pullPolicy` | Linux liveness-probe image pull policy                                                                                                                                                               | `Always`                                                                                        |
+| `secrets-store-csi-driver.linux.livenessProbeImage.tag`        | Linux liveness-probe image tag                                                                                                                                                                       | `v2.10.0`                                                                                       |
+| `secrets-store-csi-driver.linux.registrarImage.repository`     | Linux node-driver-registrar image repository                                                                                                                                                         | `registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar`                               |
+| `secrets-store-csi-driver.linux.registrarImage.pullPolicy`     | Linux node-driver-registrar image pull policy                                                                                                                                                        | `Always`                                                                                        |
+| `secrets-store-csi-driver.linux.registrarImage.tag`            | Linux node-driver-registrar image tag                                                                                                                                                                | `v2.8.0`                                                                                        |
+| `secrets-store-csi-driver.enableSecretRotation`                | Enable secret rotation feature [alpha]                                                                                                                                                               | `false`                                                                                         |
+| `secrets-store-csi-driver.rotationPollInterval`                | Secret rotation poll interval duration                                                                                                                                                               | `2m`                                                                                            |
+| `secrets-store-csi-driver.filteredWatchSecret`                 | Enable filtered watch for NodePublishSecretRef secrets with label `secrets-store.csi.k8s.io/used=true`. Refer to [doc](https://secrets-store-csi-driver.sigs.k8s.io/load-tests.html) for more details | `true`                                                                                          |
+| `secrets-store-csi-driver.syncSecret.enabled`                  | Enable rbac roles and bindings required for syncing to Kubernetes native secrets                                                                                                                     | `false`                                                                                         |
+| `rbac.install`                                                 | Install default service account                                                                                                                                                                      | true                                                                                              |
 
 ## Usage
 
-Add your secret data to [Alibaba Cloud Secrets Manager]((https://www.alibabacloud.com/help/en/key-management-service/latest/secrets-manager-overview)) with aliyun CLI tool, firstly use `aliyun configure` to set your credentials and default region info.
+- KMS Secrets Manager
+  Add your secret data to [Alibaba Cloud Secrets Manager](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets-manager-overview) with aliyun CLI tool, firstly use `aliyun configure` to set your credentials and default region info.
+  Now create a test secret:
 
-Now create a test secret:
+  ```shell
+  aliyun kms CreateSecret --SecretName test-kms --SecretData 1234 --VersionId v1
+  ```
 
-```shell
-aliyun kms CreateSecret --SecretName test --SecretData 1234 --VersionId v1
-```
-Create an access policy for the pod scoped down to just the secrets it should have :
-```shell
-aliyun ram CreatePolicy --PolicyName kms-test --PolicyDocument '{"Statement": [{"Effect": "Allow","Action": "kms:GetSecretValue","Resource": "acs:kms:{region-id}:{aliyun-uid}:secret/test"}],"Version": "1"}'
-```
+  Create an access policy for the pod scoped down to just the secrets it should have :
+
+  ```shell
+  aliyun ram CreatePolicy --PolicyName kms-test --PolicyDocument '{"Statement": [{"Effect": "Allow","Action": ["kms:GetSecretValue", "kms:Decrypt"],"Resource": "acs:kms:{region-id}:{aliyun-uid}:secret/test-kms"}],"Version": "1"}'
+  ```
+- OOS Secret Parameter
+  Add your secret data to [Alibaba Cloud OOS Encrypted Parameter](https://www.alibabacloud.com/help/en/oos/getting-started/manage-encryption-parameters) with aliyun CLI tool, firstly use `aliyun configure` to set your parameter and default region info.
+  Now create a test secret:
+
+  ```shell
+  aliyun oos CreateSecretParameter --Value SecretParameter --Name test-oos
+  ```
+
+  Create an access policy for the pod scoped down to just the secrets it should have :
+
+  ```shell
+  aliyun ram CreatePolicy --PolicyName oos-test --PolicyDocument '{"Statement": [{"Effect": "Allow","Action": ["oos:GetSecretParameter"],"Resource": "acs:oos:{region-id}:{aliyun-uid}:secretparameter/test-oos"}],"Version": "1"}'
+  ```
 
 ### Enable [RRSA](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-rrsa-to-enforce-access-control#section-ywl-59g-j8h) feature
 
-RAM Roles for Service Accounts (RRSA) is the recommended secure authentication method for obtaining secrets in Alibaba Cloud Secrets Manager. For the configuration, please refer to the following steps:
+RAM Roles for Service Accounts (RRSA) is the recommended secure authentication method for obtaining secrets in Alibaba Cloud Secrets Manager and OOS Encrypted Parameter. For the configuration, please refer to the following steps:
 
 1. Create the RAM OIDC provider for the cluster with [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) or reference [RRSA](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-rrsa-to-enforce-access-control#section-ywl-59g-j8h) doc if you have not already done so:
 
 ```shell
 ack-ram-tool rrsa enable -c <clusterId>
 ```
-2. Next create the service account to be used by the pod and associate the above kms RAM policy with that service account. Here we use [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) CLI to simplify the steps of RAM role creation and authorization:
+
+2. Next create the service account to be used by the pod, and associate the above RAM policy based on the product to synchronize with that service account. Here we use [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) CLI to simplify the steps of RAM role creation and authorization:
 
 ```shell
 ack-ram-tool rrsa associate-role -c <clusterId> --create-role-if-not-exist -r <roleName> -n <namespace> -s csi-secrets-store-provider-alibabacloud
 ```
 
 3. Create a secret named `alibaba-credentials` in target cluster, create a template file below named `alibaba-credentials.yaml`:
-
 
 ```yaml
 apiVersion: v1
@@ -122,7 +135,7 @@ type: Opaque
 
 **oidcproviderarn**: specify the cluster's OIDC provider ARN, you can obtain the value in [RAM SSO](https://ram.console.aliyun.com/providers) console, then find the target provider ARN in the `OIDC` tab, base64 encoding required
 **rolearn**: specify the assumed ram role ARN, base64 encoding required
-**namespace **: specify the namespace which will install provider
+**namespace**: specify the namespace which will install provider
 
 Run the command to deploy secret:
 
@@ -146,37 +159,46 @@ rrsa:
   enable: true
 ```
 
-
-
-Now create the SecretProviderClass which tells the provider which secrets are to be mounted in the pod. The secretproviderclass.yaml in the [examples](./examples) directory will mount "test" created above.
+Now create the SecretProviderClass which tells the provider which secrets are to be mounted in the pod. The secretproviderclass.yaml in the [examples](./examples) directory will mount all secret created above.
 
 Finally we can deploy our pod. The deploy.yaml in the examples directory contains a sample nginx deployment that mounts the secrets under /mnt/secrets-store in the pod.
 
 To verify the secret has been mounted properly, See the example below:
 
 ```shell
-kubectl exec -it $(kubectl get pods | awk '/nginx-deployment/{print $1}' | head -1) cat /mnt/secrets-store/test; echo
+kubectl exec -it $(kubectl get pods | awk '/nginx-deployment/{print $1}' | head -1) cat /mnt/secrets-store/test-kms; echo
+kubectl exec -it $(kubectl get pods | awk '/nginx-deployment/{print $1}' | head -1) cat /mnt/secrets-store/test-oos; echo
 ```
+
 ### Troubleshooting
+
 Most errors can be viewed by describing the pod deployment. For the deployment, find the pod names using get pods (use -n **&lt;NAMESPACE&gt;** if you are not using the default namespace):
+
 ```shell
 kubectl get pods
 ```
+
 Then describe the pod (substitute the pod ID from above for **&lt;PODID&gt;**, as before use -n if you are not using the default namespace):
+
 ```shell
 kubectl describe pod/<PODID>
 ```
+
 Additional information may be available in the provider logs:
+
 ```shell
 kubectl -n <PROVIDER_NAMESPACE> get pods
 kubectl -n <PROVIDER_NAMESPACE> logs pod/<PODID>
 ```
+
 Where **&lt;PODID&gt;** in this case is the id of the *csi-secrets-store-provider-alibabacloud* pod.
 
 ### SecretProviderClass options
+
 The SecretProviderClass has the following format:
+
 ```yaml
-apiVersion: secrets-store.csi.x-k8s.io/v1alpha1
+apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
 metadata:
   name: <NAME>
@@ -184,33 +206,35 @@ spec:
   provider: alibabacloud   # please using fixed value 'alibabacloud'
   parameters:
 ```
+
 The parameters section contains the details of the mount request and contain one of the three fields:
+
 * objects: This is a string containing a YAML declaration (described below) of the secrets to be mounted, For example:
-    ```yaml
-      parameters:
-        objects: |
-            - objectName: "MySecret"
-    ```
+  ```yaml
+    parameters:
+      objects: |
+          - objectName: "MySecret"
+            objectType: "kms"  # support kms and oos, default is kms
+  ```
 * region: An optional field to specify the Alibaba Cloud region to use when retrieving secrets from Secrets Manage. If this field is missing, the provider will lookup the region from the annotation on the node. This lookup adds overhead to mount requests so clusters using large numbers of pods will benefit from providing the region here.
 * pathTranslation: An optional field to specify a substitution character to use when the path separator character (slash on Linux) is used in the file name. If a Secret or parameter name contains the path separator failures will occur when the provider tries to create a mounted file using the name. When not specified the underscore character is used, thus My/Path/Secret will be mounted as My_Path_Secret. This pathTranslation value can either be the string "False" or a single character string. When set to "False", no character substitution is performed.
 
 The objects field of the SecretProviderClass can contain the following sub-fields:
+
 * objectName: This field is required. It specifies the name of the secret or parameter to be fetched. For Secrets Manager this is the [SecretName](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters) parameter and can be either the friendly name or full ARN of the secret.
-
+* objectType: This optional field specifies the type of secret. Support `kms` and `oos`, defaults is `kms`.
 * objectAlias: This optional field specifies the file name under which the secret will be mounted. When not specified the file name defaults to objectName.
-
-* objectVersion: This field is optional, and generally not recommended since updates to the secret require updating this field. For Secrets Manager this is the [VersionId](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters).
-
-* objectVersionLabel: This optional fields specifies the alias used for the version. Most applications should not use this field since the most recent version of the secret is used by default. For Secrets Manager this is the [VersionStage](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters).
-
+* objectVersion: This field is optional, only for kms secret, and generally not recommended since updates to the secret require updating this field. For Secrets Manager this is the [VersionId](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters).
+* objectVersionLabel: This optional fields specifies the alias used for the version, only for kms secret. Most applications should not use this field since the most recent version of the secret is used by default. For Secrets Manager this is the [VersionStage](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters).
 * jmesPath: This optional field specifies the specific key-value pairs to extract from a JSON-formatted secret. You can use this field to mount key-value pairs from a properly formatted secret value as individual secrets. For example: Consider a secret "test" with JSON content as follows:
 
-    ```shell
-    {
-    	"username": "testuser",
-    	"password": "testpassword"
-    }
-    ```
+  ```shell
+  {
+  	"username": "testuser",
+  	"password": "testpassword"
+  }
+  ```
+
   To mount the username and password key pairs of this secret as individual secrets, use the jmesPath field as follows:
 
   ```yaml:
@@ -222,16 +246,34 @@ The objects field of the SecretProviderClass can contain the following sub-field
                   - path: "password"
                     objectAlias: "MySecretPassword"
   ```
+
   If you use the jmesPath field,  you must provide the following two sub-fields:
+
   * path: This required field is the [JMES path](https://jmespath.org/specification.html) to use for retrieval
   * objectAlias: This required field specifies the file name under which the key-value pair secret will be mounted.
+
+**Tips**
+If there is a special scene that requires the same objectName of the object (like the following example, kms and oos have the same secret name), then you need to set different objectAlias of the object, otherwise all the secrets of the previous object mount will be overwritten by the last one.
+
+```yaml
+    parameters:
+      objects: |
+          - objectName: "MySecret"
+            objectType: "kms"
+            objectAlias: "MySecretKMS"
+          - objectName: "MySecret"
+            objectType: "oos"
+            objectAlias: "MySecretOOS"
+```
 
 ## Additional Considerations
 
 ### Rotation
+
 When using the optional alpha [rotation reconciler](https://secrets-store-csi-driver.sigs.k8s.io/topics/secret-auto-rotation.html) feature of the Secrets Store CSI driver the driver will periodically remount the secrets in the SecretProviderClass. This will cause additional API calls which results in additional charges. Applications should use a reasonable poll interval that works with their rotation strategy. A one hour poll interval is recommended as a default to reduce excessive API costs.
 
 Anyone wishing to test out the rotation reconciler feature can enable it using helm:
+
 ```bash
 helm upgrade -n <NAMESPACE> csi-secrets-store secrets-store-csi-driver/secrets-store-csi-driver --set enableSecretRotation=true --set rotationPollInterval=60s
 ```
@@ -246,9 +288,13 @@ When evaluating this plugin consider the following threats:
 - When a secret is consumed through **environment variables**, misconfigurations such as enabling a debug endpoint or including dependencies that log process environment details may leak secrets.
 - When **syncing** secret material to another data store (like Kubernetes Secrets), consider whether the access controls on that data store are sufficiently narrow in scope.
 
-For these reasons, *when possible* we recommend using the [Secrets Manager API](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets) directly.
+For these reasons, *when possible* we recommend using the Alibaba Cloud Service API directly.
+
+- [Key Management Service API](https://www.alibabacloud.com/help/en/kms/key-management-service/developer-reference/api-getsecretvalue)
+- [Encrypt Parameter API](https://www.alibabacloud.com/help/en/oos/developer-reference/api-oos-2019-06-01-getsecretparameter)
 
 ## Security
+
 Please report vulnerabilities by email to **kubernetes-security@service.aliyun.com**. Also see our [SECURITY.md](./SECURITY.md) file for details.
 
 ## License

@@ -8,8 +8,11 @@ import (
 	"github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/provider"
 	"github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/utils"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
+	openapiv2 "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	kms "github.com/alibabacloud-go/kms-20160120/v2/client"
+	oos "github.com/alibabacloud-go/oos-20190601/v4/client"
 	"github.com/alibabacloud-go/tea/tea"
+	"github.com/aliyun/credentials-go/credentials"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -31,6 +34,7 @@ const (
 	transAttrib      = "pathTranslation" // Path translation char
 	secProvAttrib    = "objects"         // The attributed used to pass the SecretProviderClass definition (with what to mount)
 	defaultKmsDomain = "kms-vpc.%s.aliyuncs.com"
+	defaultOosDomain = "oos-vpc.%s.aliyuncs.com"
 )
 
 // A Secrets Store CSI Driver provider implementation for Alibaba Cloud Secrets Manager.
@@ -39,7 +43,6 @@ type CSIDriverProviderServer struct {
 }
 
 // Factory function to create the server to handle incoming mount requests.
-//
 func NewServer() (srv *CSIDriverProviderServer, e error) {
 	return &CSIDriverProviderServer{}, nil
 
@@ -97,26 +100,44 @@ func (s *CSIDriverProviderServer) Mount(ctx context.Context, req *v1alpha1.Mount
 	if err != nil {
 		return nil, err
 	}
-	domain := defaultKmsDomain
-	if strings.Contains(domain, "%s") {
-		domain = fmt.Sprintf(domain, region)
-	}
-	kmsClient, err := kms.NewClient(&openapi.Config{
-		Endpoint:   tea.String(domain),
-		Credential: cred,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Get the list of secrets to mount. These will be grouped together by type
-	// in a map of slices (map[string][]*SecretDescriptor) keyed by secret type
-	// so that requests can be batched if the implementation allows it.
+	var smProvider provider.SecretsManagerProvider
 	descriptors, err := provider.NewSecretObjectList(mountDir, translate, attrib[secProvAttrib])
 	if err != nil {
 		return nil, err
 	}
-	smProvider := provider.SecretsManagerProvider{KmsClient: kmsClient}
+
+	objectTypeMap := make(map[string]bool)
+	for _, descriptor := range descriptors {
+		switch descriptor.ObjectType {
+		case "", provider.ObjectTypeKMS:
+			objectTypeMap[provider.ObjectTypeKMS] = true
+		case provider.ObjectTypeOOS:
+			objectTypeMap[provider.ObjectTypeOOS] = true
+		default:
+			return nil, fmt.Errorf("unsupported object type, only support %q and %q", provider.ObjectTypeKMS, provider.ObjectTypeOOS)
+		}
+	}
+
+	var kmsClient *kms.Client
+	var oosClient *oos.Client
+	if objectTypeMap[provider.ObjectTypeKMS] {
+		kmsClient, err = newKmsClient(cred, region)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if objectTypeMap[provider.ObjectTypeOOS] {
+		oosClient, err = newOosClient(cred, region)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	smProvider = provider.SecretsManagerProvider{
+		KmsClient: kmsClient,
+		OosClient: oosClient,
+	}
+
 	// Fetch all secrets before saving so we write nothing on failure.
 	var fetchedSecrets []*provider.SecretValue
 	secrets, err := smProvider.GetSecretValues(descriptors, curVerMap)
@@ -143,8 +164,33 @@ func (s *CSIDriverProviderServer) Mount(ctx context.Context, req *v1alpha1.Mount
 
 }
 
+func newKmsClient(cred credentials.Credential, region string) (*kms.Client, error) {
+	domain := defaultKmsDomain
+	if strings.Contains(domain, "%s") {
+		domain = fmt.Sprintf(domain, region)
+	}
+	kmsClient, err := kms.NewClient(&openapi.Config{
+		Endpoint:   tea.String(domain),
+		Credential: cred,
+	})
+
+	return kmsClient, err
+}
+
+func newOosClient(cred credentials.Credential, region string) (*oos.Client, error) {
+	domain := defaultOosDomain
+	if strings.Contains(domain, "%s") {
+		domain = fmt.Sprintf(domain, region)
+	}
+	oosClient, err := oos.NewClient(&openapiv2.Config{
+		Endpoint:   tea.String(domain),
+		Credential: cred,
+	})
+
+	return oosClient, err
+}
+
 // Return the provider plugin version information to the driver.
-//
 func (s *CSIDriverProviderServer) Version(ctx context.Context, req *v1alpha1.VersionRequest) (*v1alpha1.VersionResponse, error) {
 	return &v1alpha1.VersionResponse{
 		Version:        "v1alpha1",

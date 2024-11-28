@@ -1,6 +1,3 @@
-nameOverride: ""
-fullnameOverride: ""
-
 # One or more secrets to be used when pulling images
 imagePullSecrets: []
 # - name: myRegistryKeySecretName
@@ -8,10 +5,12 @@ imagePullSecrets: []
 # log level. Uses V logs (klog)
 logVerbosity: 0
 
+regionId: __ACK_REGION_ID__
+
 linux:
   image:
-    repository: registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud
-    tag: v0.1.0
+    repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud
+    tag: v0.3.0
     pullPolicy: Always
   nodeSelector: {}
   tolerations: []
@@ -40,11 +39,11 @@ linux:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
-        - matchExpressions:
-          - key: type
-            operator: NotIn
-            values:
-            - virtual-kubelet
+          - matchExpressions:
+              - key: type
+                operator: NotIn
+                values:
+                  - virtual-kubelet
 
 ## Configuration values for the secrets-store-csi-driver dependency.
 ## ref: https://github.com/kubernetes-sigs/secrets-store-csi-driver/tree/master/charts/secrets-store-csi-driver/README.md
@@ -59,24 +58,29 @@ secrets-store-csi-driver:
     kubeletRootDir: /var/lib/kubelet
     metricsAddr: ":8080"
     image:
-      repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-driver
-      tag: v1.3.4
+      repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-driver
+      tag: v1.4.6
       pullPolicy: Always
     providersDir: /var/run/secrets-store-csi-providers
     registrarImage:
-      repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar
-      tag: v2.8.0
+      repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-node-driver-registrar
+      tag: v2.11.1
       pullPolicy: Always
     livenessProbeImage:
-      repository: registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-livenessprobe
-      tag: v2.10.0
+      repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-livenessprobe
+      tag: v2.13.1
       pullPolicy: Always
+    crds:
+      image:
+        repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-driver-crds
+        tag: v1.4.6
+        pullPolicy: Always
 
   enableSecretRotation: false
   rotationPollInterval: 2m
   # Refer to https://secrets-store-csi-driver.sigs.k8s.io/load-tests.html for more details on actions to take before enabling this feature
   filteredWatchSecret: true
-  
+
   syncSecret:
     enabled: false
 

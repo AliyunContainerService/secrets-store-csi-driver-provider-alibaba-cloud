@@ -30,6 +30,9 @@ type SecretObject struct {
 	// Optional version/stage label of the secret (defaults to latest).
 	ObjectVersionLabel string `json:"objectVersionLabel"`
 
+	// Optional type of the secret (defaults to kms)
+	ObjectType string `json:"objectType"`
+
 	//Optional array to specify what json key value pairs to extract from a secret and mount as individual secrets
 	JMESPath []JMESPathObject `json:"jmesPath"`
 
@@ -40,7 +43,7 @@ type SecretObject struct {
 	mountDir string `json:"-"`
 }
 
-//An individual json key value pair to mount
+// An individual json key value pair to mount
 type JMESPathObject struct {
 	//JMES path to use for retrieval
 	Path string `json:"path"`
@@ -98,7 +101,7 @@ func NewSecretObjectList(mountDir, translate, objectSpec string) (objects []*Sec
 		objects = append(objects, specObj)
 
 		// Check for duplicate names
-		if names[specObj.ObjectName] {
+		if names[specObj.ObjectName] && names[specObj.ObjectAlias] && ExistsWithSameNameAndType(objects, specObj) {
 			return nil, fmt.Errorf("Name already in use for objectName: %s", specObj.ObjectName)
 		}
 		names[specObj.ObjectName] = true
@@ -124,7 +127,23 @@ func NewSecretObjectList(mountDir, translate, objectSpec string) (objects []*Sec
 		}
 
 	}
+
 	return objects, nil
+}
+
+// check if there exists an object with the same name and type.
+func ExistsWithSameNameAndType(objects []*SecretObject, specObj *SecretObject) bool {
+	for _, obj := range objects {
+		if obj.ObjectName != specObj.ObjectName {
+			continue
+		}
+
+		if obj.ObjectType == specObj.ObjectType || (obj.ObjectType == "" && specObj.ObjectType == ObjectTypeKMS) || (obj.ObjectType == ObjectTypeKMS && specObj.ObjectType == "") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // validateSecretObject is used to validate input before it is used by the rest of the plugin.
