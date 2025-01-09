@@ -1,6 +1,6 @@
 # Alibaba Cloud Secrets Manager for Secret Store CSI Driver
 
-Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you to get secret contents stored in [Alibaba Cloud Secrets Manager](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets-manager-overview) or [Alibaba Cloud OOS Eencrypted Parameter](https://www.alibabacloud.com/help/en/oos/getting-started/manage-encryption-parameters), and use the Secrets Store CSI driver interface to mount them into Kubernetes pods.
+Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you to get secret contents stored in [Alibaba Cloud Secrets Manager](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets-manager-overview) or [Alibaba Cloud OOS Encrypted Parameter](https://www.alibabacloud.com/help/en/oos/getting-started/manage-encryption-parameters), and use the Secrets Store CSI driver interface to mount them into Kubernetes pods.
 
 ### Prerequisites
 
@@ -8,7 +8,7 @@ Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you t
 
 ### Installing the Chart
 
-- This chart installs the [secrets-store-csi-driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver) and the Alibaba Cloud KMS Secrets Manager provider for the driver
+- This chart installs the [secrets-store-csi-driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver) and the Alibaba Cloud KMS Secrets Manager or OOS Encrypted Parameter provider for the driver
 
 ```shell
 helm repo add csi-secrets-store-provider-alibabacloud https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/main/charts
@@ -76,90 +76,112 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 
 ## Usage
 
-- KMS Secrets Manager
-  Add your secret data to [Alibaba Cloud Secrets Manager](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets-manager-overview) with aliyun CLI tool, firstly use `aliyun configure` to set your credentials and default region info.
-  Now create a test secret:
+  Please refer to the following ways to create KMS secrets or OOS Encryption Parameters.
 
-  ```shell
-  aliyun kms CreateSecret --SecretName test-kms --SecretData 1234 --VersionId v1
-  ```
+1. KMS Secrets Manager
+   - Add your secret data to [Alibaba Cloud Secrets Manager](https://www.alibabacloud.com/help/en/key-management-service/latest/secrets-manager-overview) with aliyun CLI tool, firstly use `aliyun configure` command to set your credentials and region info, then create a test secret using the following command:
 
-  Create an access policy for the pod scoped down to just the secrets it should have :
+     ```shell
+     aliyun kms CreateSecret --SecretName test-kms --SecretData 1234 --VersionId v1 --EncryptionKeyId <kms-key-id> --DKMSInstanceId <kms-instance-id> 
+     ```
+   - Create a minimized RAM policy using the template below::
 
-  ```shell
-  aliyun ram CreatePolicy --PolicyName kms-test --PolicyDocument '{"Statement": [{"Effect": "Allow","Action": ["kms:GetSecretValue", "kms:Decrypt"],"Resource": "acs:kms:{region-id}:{aliyun-uid}:secret/test-kms"}],"Version": "1"}'
-  ```
-- OOS Secret Parameter
-  Add your secret data to [Alibaba Cloud OOS Eencrypted Parameter](https://www.alibabacloud.com/help/en/oos/getting-started/manage-encryption-parameters) with aliyun CLI tool, firstly use `aliyun configure` to set your credentials and default region info.
-  Now create a test secret:
+     ```shell
+     aliyun ram CreatePolicy --PolicyName kms-test --PolicyDocument '{
+     "Version": "1",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "kms:GetSecretValue",
+           "kms:Decrypt"
+         ],
+         "Resource": [
+           "acs:kms:cn-hangzhou:{accountId}:secret/test-kms",  # test-kms is the name of the secret created above
+           "acs:kms:cn-hangzhou:{accountId}:key/{kms-key-id}"  # # {kms-key-id} is the EncryptionKeyId used above
+         ]
+       }
+     ]}'
+     ```
+2. OOS Encryption Parameters
+   - Add your secret data to [Alibaba Cloud OOS Encrypted Parameter](https://www.alibabacloud.com/help/en/oos/getting-started/manage-encryption-parameters) with aliyun CLI tool, firstly use `aliyun configure` command to set your credentials and region info, then create a test parameter using the following command:
 
-  ```shell
-  aliyun oos CreateSecretParameter --Value SecretParameter --Name test-oos
-  ```
+     ```shell
+     aliyun oos CreateSecretParameter --Value SecretParameter --Name test-oos
+     ```
+   - Create a minimized RAM policy using the template below::
 
-  Create an access policy for the pod scoped down to just the secrets it should have :
-
-  ```shell
-  aliyun ram CreatePolicy --PolicyName oos-test --PolicyDocument '{"Statement": [{"Effect": "Allow","Action": ["oos:GetSecretParameter"],"Resource": "acs:oos:{region-id}:{aliyun-uid}:secretparameter/test-oos"}],"Version": "1"}'
-  ```
+     ```shell
+     aliyun ram CreatePolicy --PolicyName oos-test --PolicyDocument '{
+     "Version": "1",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "oos:GetSecretParameter",
+           "kms:GetSecretValue"
+         ],
+         "Resource": "acs:oos:cn-hangzhou:{accountId}:secretparameter/test-oos"  # test-oos is the name of the parameter created above
+       }
+     ]}'
+     ```
 
 ### Enable [RRSA](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-rrsa-to-enforce-access-control#section-ywl-59g-j8h) feature
 
-RAM Roles for Service Accounts (RRSA) is the recommended secure authentication method for obtaining secrets in Alibaba Cloud Secrets Manager and OOS Eencrypted Parameter. For the configuration, please refer to the following steps:
+RAM Roles for Service Accounts (RRSA) is the recommended secure authentication method for obtaining secrets in Alibaba Cloud Secrets Manager and OOS Encrypted Parameter. For the configuration, please refer to the following steps:
 
 1. Create the RAM OIDC provider for the cluster with [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) or reference [RRSA](https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/use-rrsa-to-enforce-access-control#section-ywl-59g-j8h) doc if you have not already done so:
 
-```shell
-ack-ram-tool rrsa enable -c <clusterId>
-```
+   ```shell
+   ack-ram-tool rrsa enable -c <clusterId>
+   ```
+2. Next create the service account to be used by the pod and associate the above RAM policy with that service account. Here we use [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) CLI to simplify the steps of RAM role creation and authorization:
 
-2. Next create the service account to be used by the pod, and associate the above RAM policy based on the product to synchronize with that service account. Here we use [ack-ram-tool](https://github.com/AliyunContainerService/ack-ram-tool) CLI to simplify the steps of RAM role creation and authorization:
-
-```shell
-ack-ram-tool rrsa associate-role -c <clusterId> --create-role-if-not-exist -r <roleName> -n <namespace> -s csi-secrets-store-provider-alibabacloud
-```
-
+   ```shell
+   ack-ram-tool rrsa associate-role -c <clusterId> --create-role-if-not-exist -r <roleName> -n <namespace> -s csi-secrets-store-provider-alibabacloud
+   ```
 3. Create a secret named `alibaba-credentials` in target cluster, create a template file below named `alibaba-credentials.yaml`:
 
-```yaml
-apiVersion: v1
-data:
-  oidcproviderarn: ****
-  rolearn: ****   #specify the assumed ram role ARN, base64 encoding required
-kind: Secret
-metadata:
-  name: alibaba-credentials
-  namespace: <namespace>
-type: Opaque  
-```
+   ```yaml
+   apiVersion: v1
+   data:
+     oidcproviderarn: acs:ram::<accountId>:oidc-provider/ack-rrsa-<ack-cluster-id>
+     rolearn: acs:ram::<accountId>:role/<ram-role-name>
+   kind: Secret
+   metadata:
+     name: alibaba-credentials
+     namespace: <namespace>
+   type: Opaque
+   ```
 
-**oidcproviderarn**: specify the cluster's OIDC provider ARN, you can obtain the value in [RAM SSO](https://ram.console.aliyun.com/providers) console, then find the target provider ARN in the `OIDC` tab, base64 encoding required
-**rolearn**: specify the assumed ram role ARN, base64 encoding required
-**namespace **: specify the namespace which will install provider
+   **oidcproviderarn**: specify the cluster's OIDC provider ARN, you can obtain the value in [RAM SSO](https://ram.console.aliyun.com/providers) console, then find the target provider ARN in the `OIDC` tab, base64 encoding required
 
-Run the command to deploy secret:
+   **rolearn**: specify the assumed ram role ARN, base64 encoding required
 
-```bash
-kubectl apply -f alibaba-credentials.yaml
-```
+   **namespace**: specify the namespace which will install provider
 
+   Run the command to deploy secret:
+
+   ```bash
+   kubectl apply -f alibaba-credentials.yaml
+   ```
 4. Update below envVarsFromSecret configuration in the values.yaml:
 
-```yaml
-envVarsFromSecret:
-  ALICLOUD_ROLE_ARN:
-    secretKeyRef: alibaba-credentials
-    key: rolearn
-  ALICLOUD_OIDC_PROVIDER_ARN:
-    secretKeyRef: alibaba-credentials
-    key: oidcproviderarn
+   ```yaml
+   envVarsFromSecret:
+     ALICLOUD_ROLE_ARN:
+       secretKeyRef: alibaba-credentials
+       key: rolearn
+     ALICLOUD_OIDC_PROVIDER_ARN:
+       secretKeyRef: alibaba-credentials
+       key: oidcproviderarn
 
-rrsa:
-  # Specifies whether using rrsa and enalbe sa token volume projection, default is false
-  enable: true
-```
+   rrsa:
+     # Specifies whether using rrsa and enalbe sa token volume projection, default is false
+     enable: true
+   ```
 
-Now create the SecretProviderClass which tells the provider which secrets are to be mounted in the pod. The secretproviderclass.yaml in the [examples](./examples) directory will mount all secret created above.
+Now create the SecretProviderClass which tells the provider which secrets are to be mounted in the pod. The secretproviderclass.yaml in the [examples](./examples) directory will mount all secrets created above.
 
 Finally we can deploy our pod. The deploy.yaml in the examples directory contains a sample nginx deployment that mounts the secrets under /mnt/secrets-store in the pod.
 
@@ -210,13 +232,13 @@ spec:
 The parameters section contains the details of the mount request and contain one of the three fields:
 
 * objects: This is a string containing a YAML declaration (described below) of the secrets to be mounted, For example:
+
   ```yaml
-    parameters:
-      objects: |
-          - objectName: "MySecret"
-            objectType: "kms"  # support kms and oos, default is kms
+  parameters:
+    objects: |
+        - objectName: "MySecret"
   ```
-* region: An optional field to specify the Alibaba Cloud region to use when retrieving secrets from Secrets Manage. If this field is missing, the provider will lookup the region from the annotation on the node. This lookup adds overhead to mount requests so clusters using large numbers of pods will benefit from providing the region here.
+* region: An optional field to specify the Alibaba Cloud region to use when retrieving secrets from Secrets Manager. If this field is missing, the provider will lookup the region of the node. This lookup adds overhead to mount requests so clusters using large numbers of pods will benefit from providing the region here.
 * pathTranslation: An optional field to specify a substitution character to use when the path separator character (slash on Linux) is used in the file name. If a Secret or parameter name contains the path separator failures will occur when the provider tries to create a mounted file using the name. When not specified the underscore character is used, thus My/Path/Secret will be mounted as My_Path_Secret. This pathTranslation value can either be the string "False" or a single character string. When set to "False", no character substitution is performed.
 
 The objects field of the SecretProviderClass can contain the following sub-fields:
@@ -224,8 +246,8 @@ The objects field of the SecretProviderClass can contain the following sub-field
 * objectName: This field is required. It specifies the name of the secret or parameter to be fetched. For Secrets Manager this is the [SecretName](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters) parameter and can be either the friendly name or full ARN of the secret.
 * objectType: This optional field specifies the type of secret. Support `kms` and `oos`, defaults to `kms`.
 * objectAlias: This optional field specifies the file name under which the secret will be mounted. When not specified the file name defaults to objectName.
-* objectVersion: This field is optional, only for kms secret, and generally not recommended since updates to the secret require updating this field. For Secrets Manager this is the [VersionId](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters).
-* objectVersionLabel: This optional fields specifies the alias used for the version, only for kms secret. Most applications should not use this field since the most recent version of the secret is used by default. For Secrets Manager this is the [VersionStage](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters).
+* objectVersion: This field is optional, only for KMS secret, and generally not recommended since updates to the secret require updating this field. For Secrets Manager this is the [VersionId](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters).
+* objectVersionLabel: This optional fields specifies the alias used for the version, only for KMS secret. Most applications should not use this field since the most recent version of the secret is used by default. For Secrets Manager this is the [VersionStage](https://www.alibabacloud.com/help/en/key-management-service/latest/getsecretvalue#parameters).
 * jmesPath: This optional field specifies the specific key-value pairs to extract from a JSON-formatted secret. You can use this field to mount key-value pairs from a properly formatted secret value as individual secrets. For example: Consider a secret "test" with JSON content as follows:
 
   ```shell
@@ -238,13 +260,13 @@ The objects field of the SecretProviderClass can contain the following sub-field
   To mount the username and password key pairs of this secret as individual secrets, use the jmesPath field as follows:
 
   ```yaml:
-        objects: |
-            - objectName: "test"
-              jmesPath:
-                  - path: "username"
-                    objectAlias: "MySecretUsername"
-                  - path: "password"
-                    objectAlias: "MySecretPassword"
+  objects: |
+      - objectName: "test"
+        jmesPath:
+            - path: "username"
+              objectAlias: "MySecretUsername"
+            - path: "password"
+              objectAlias: "MySecretPassword"
   ```
 
   If you use the jmesPath field,  you must provide the following two sub-fields:
@@ -253,16 +275,17 @@ The objects field of the SecretProviderClass can contain the following sub-field
   * objectAlias: This required field specifies the file name under which the key-value pair secret will be mounted.
 
 **Tips**
-If there is a special scene that requires the same objectName of the object (like the following example, kms and oos have the same secret name), then you need to set different objectAlias of the object, otherwise all the secrets of the previous object mount will be overwritten by the last one.
+If there is a special scene that requires the same objectName of the object (As shown in the following example, kms and oos have the same secret name), then you need to set different objectAlias of the object.Otherwise, all the secrets of the previously mounted objects will be overridden by the last one.
+
 ```yaml
-    parameters:
-      objects: |
-          - objectName: "MySecret"
-            objectType: "kms"
-            objectAlias: "MySecretKMS"
-          - objectName: "MySecret"
-            objectType: "oos"
-            objectAlias: "MySecretOOS"
+parameters:
+  objects: |
+      - objectName: "MySecret"
+        objectType: "kms"
+        objectAlias: "MySecretKMS"
+      - objectName: "MySecret"
+        objectType: "oos"
+        objectAlias: "MySecretOOS"
 ```
 
 ## Additional Considerations
@@ -291,6 +314,10 @@ For these reasons, *when possible* we recommend using the Alibaba Cloud Service 
 
 - [Key Management Service API](https://www.alibabacloud.com/help/en/kms/key-management-service/developer-reference/api-getsecretvalue)
 - [Encrypt Parameter API](https://www.alibabacloud.com/help/en/oos/developer-reference/api-oos-2019-06-01-getsecretparameter)
+
+## Security
+
+Please report vulnerabilities by email to **kubernetes-security@service.aliyun.com**. Also see our [SECURITY.md](./SECURITY.md) file for details.
 
 ## License
 
