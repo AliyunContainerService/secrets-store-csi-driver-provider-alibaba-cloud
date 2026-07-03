@@ -57,7 +57,7 @@ func main() {
 
 	//socket on which to listen to for driver calls
 	endpoint := fmt.Sprintf("%s/alibabacloud.sock", *endpointDir)
-	os.Remove(endpoint) // Make sure to start clean.
+	_ = os.Remove(endpoint) // Make sure to start clean.
 	grpcSrv := grpc.NewServer(
 		grpc.UnaryInterceptor(utils.LogInterceptor()),
 	)
@@ -68,8 +68,8 @@ func main() {
 	}
 
 	defer func() { // Cleanup on shutdown
-		listener.Close()
-		os.Remove(endpoint)
+		_ = listener.Close()
+		_ = os.Remove(endpoint)
 	}()
 
 	providerSrv, err := server.NewServer()

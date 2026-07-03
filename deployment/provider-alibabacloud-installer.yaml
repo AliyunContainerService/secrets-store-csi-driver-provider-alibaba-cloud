@@ -2,6 +2,32 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: csi-secrets-store-provider-alibabacloud
+  namespace: kube-system  # Change this if deploying to a different namespace
+  # NOTE: When using Pod SA (RRSA) auth, ensure the Pod SA Role has KMS policy attached.
+  # ack-ram-tool rrsa associate-role may strip previously attached policies.
+  # Verify with: aliyun ram ListPoliciesForRole --RoleName <pod-sa-role-name>
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: csi-secrets-store-provider-alibabacloud
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: csi-secrets-store-provider-alibabacloud
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: csi-secrets-store-provider-alibabacloud
+subjects:
+  - kind: ServiceAccount
+    name: csi-secrets-store-provider-alibabacloud
+    namespace: kube-system  # Must match the ServiceAccount namespace above
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -24,13 +50,14 @@ spec:
       hostNetwork: true
       containers:
         - name: provider-alibabacloud-installer
-          image: registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud:v0.1.0
+          image: registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud:v0.6.0
           imagePullPolicy: IfNotPresent
           args:
             - --provider-volume=/provider
             - --healthz-port=8989
             - --healthz-path=/healthz
             - --healthz-timeout=5s
+            - --region=cn-hangzhou
           livenessProbe:
             httpGet:
               path: /healthz
@@ -53,9 +80,30 @@ spec:
             capabilities:
               drop:
               - ALL
+          # env: Add environment variables here when needed, e.g.:
+          # env:
+          #   - name: ALIBABA_CLOUD_ACCESS_KEY_ID
+          #     valueFrom:
+          #       secretKeyRef:
+          #         name: alibaba-credentials
+          #         key: access-key-id
+          #   - name: ALIBABA_CLOUD_ACCESS_KEY_SECRET
+          #     valueFrom:
+          #       secretKeyRef:
+          #         name: alibaba-credentials
+          #         key: access-key-secret
+          #   - name: ALICLOUD_ACCOUNT_ID
+          #     value: "<account-id>"
+          #   - name: ALICLOUD_CLUSTER_ID
+          #     value: "<cluster-id>"
           volumeMounts:
-            - mountPath: "/provider"
-              name: provider
+            - name: provider-vol
+              mountPath: /provider
+            - name: tmp
+              mountPath: /tmp
+            # RRSA: uncomment to mount projected SA token
+            # - name: csi-secrets-store-provider-alibabacloud
+            #   mountPath: /var/run/secrets/tokens
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -66,8 +114,20 @@ spec:
                 values:
                 - virtual-kubelet
       volumes:
-        - name: provider
+        - name: provider-vol
           hostPath:
-            path: "/var/run/secrets-store-csi-providers"
+            path: /var/run/secrets-store-csi-providers
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 10Mi
+        # RRSA: uncomment to enable projected SA token volume
+        # - name: csi-secrets-store-provider-alibabacloud
+        #   projected:
+        #     sources:
+        #       - serviceAccountToken:
+        #           path: csi-secrets-store-provider-alibabacloud
+        #           expirationSeconds: 7200
+        #           audience: "sts.aliyuncs.com"
       nodeSelector:
         kubernetes.io/os: linux

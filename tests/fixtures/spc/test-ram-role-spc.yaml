@@ -1,0 +1,19 @@
+# ============================================================================
+# Test Case: TC-003 RAM Role Authentication Test (SecretProviderClass)
+# Objective: Verify AK/SK + RoleArn AssumeRole access to KMS secrets
+# Auth Method: RAM Role (AK/SK + RoleArn)
+# ============================================================================
+
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: ram-role-test
+  namespace: ${NAMESPACE}
+  labels:
+    test-case: TC-003
+spec:
+  provider: alibabacloud
+  parameters:
+    objects: |
+      - objectName: "${RAM_ROLE_SECRET_NAME}"
+        objectType: "kms"

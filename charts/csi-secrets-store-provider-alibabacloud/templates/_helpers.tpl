@@ -42,9 +42,10 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
-Common labels for helm resources
+Common labels for helm resources (standard Kubernetes recommended labels)
 */}}
 {{- define "csspa.common.labels" -}}
+app.kubernetes.io/name: "{{ template "csspa.name" . }}"
 app.kubernetes.io/instance: "{{ .Release.Name }}"
 app.kubernetes.io/managed-by: "{{ .Release.Service }}"
 app.kubernetes.io/version: "{{ .Chart.AppVersion }}"
@@ -52,11 +53,9 @@ helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
 {{- end -}}
 
 {{/*
-Standard labels for helm resources
+Standard labels for helm resources (extends common labels with legacy 'app' label)
 */}}
 {{- define "csspa.labels" -}}
-labels:
-{{ include "csspa.common.labels" . | indent 2 }}
-  app.kubernetes.io/name: "{{ template "csspa.name" . }}"
-  app: {{ template "csspa.name" . }}
+{{- include "csspa.common.labels" . }}
+app: {{ template "csspa.name" . }}
 {{- end -}}

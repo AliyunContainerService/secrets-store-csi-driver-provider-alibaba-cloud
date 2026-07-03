@@ -1,0 +1,52 @@
+# ============================================================================
+# Test Case: TC-002 Backward Compatibility Test - Provider RRSA Mode (Pod)
+# Objective: Verify legacy Provider-level RRSA authentication still works in v0.6.0
+# Auth Method: Provider RRSA (without specifying usePodServiceAccountToken)
+# ============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backward-compat-test
+  namespace: ${NAMESPACE}  # Test namespace
+  labels:
+    test-type: backward-compatibility
+    test-case: TC-002
+    version: v0.6.0
+spec:
+  # Note: Uses the default ServiceAccount
+  # No specific SA needed as authentication is handled at Provider level
+  containers:
+  - name: test-container
+    image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
+    imagePullPolicy: IfNotPresent
+    command:
+    - "/bin/sh"
+    - "-c"
+    - |
+      echo "Starting backward compatibility test..."
+      echo "Checking mounted secrets..."
+      ls -la /mnt/secrets-store/
+      echo "Reading secret content..."
+      cat /mnt/secrets-store/${RRSA_SECRET_NAME}
+      echo ""
+      echo "Test completed successfully!"
+      sleep 3600
+    volumeMounts:
+    - name: secrets-store-inline
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "128Mi"
+        cpu: "200m"
+  volumes:
+  - name: secrets-store-inline
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "backward-compat-test"

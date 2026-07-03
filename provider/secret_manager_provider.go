@@ -158,7 +158,12 @@ func (smp *SecretsManagerProvider) fetchSecret(secObj *SecretObject) (ver string
 			return "", nil, err
 		}
 
-		return getOOSSecret(smp.OosClient, secObj)
+		client := secObj.OosClient
+		if client == nil {
+			client = smp.OosClient
+		}
+
+		return getOOSSecret(client, secObj)
 	default:
 		return "", nil, fmt.Errorf("Secret type  %s not support. Only support kms and oos", secObj.ObjectType)
 	}
