@@ -34,6 +34,8 @@ var (
 
 	maxConcurrentKmsSecretPulls = flag.Int("max-concurrent-kms-secret-pulls", 10, "used to control how many kms secrets are pulled at the same time.")
 	maxConcurrentOosSecretPulls = flag.Int("max-concurrent-oos-secret-pulls", 10, "used to control how many oos secrets are pulled at the same time.")
+
+	region = flag.String("region", "cn-hangzhou", "Region id, change it according to where you want to pull the secret from")
 )
 
 // Main entry point for the Secret Store CSI driver Alibaba Cloud provider. This main
@@ -48,13 +50,14 @@ func main() {
 
 	provider.LimiterInstance.Kms.SecretPullLimiter = rate.NewLimiter(rate.Limit(*maxConcurrentKmsSecretPulls), 1)
 	provider.LimiterInstance.OOS.SecretPullLimiter = rate.NewLimiter(rate.Limit(*maxConcurrentOosSecretPulls), 1)
+	provider.Region = *region
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT, os.Interrupt)
 
 	//socket on which to listen to for driver calls
 	endpoint := fmt.Sprintf("%s/alibabacloud.sock", *endpointDir)
-	os.Remove(endpoint) // Make sure to start clean.
+	_ = os.Remove(endpoint) // Make sure to start clean.
 	grpcSrv := grpc.NewServer(
 		grpc.UnaryInterceptor(utils.LogInterceptor()),
 	)
@@ -64,19 +67,9 @@ func main() {
 		klog.Fatalf("Failed to listen on unix socket. error: %v", err)
 	}
 
-	//cfg, err := rest.InClusterConfig()
-	//if err != nil {
-	//	klog.Fatalf("Can not get cluster config. error: %v", err)
-	//}
-	//
-	//clientset, err := kubernetes.NewForConfig(cfg)
-	//if err != nil {
-	//	klog.Fatalf("Can not initialize kubernetes client. error: %v", err)
-	//}
-
 	defer func() { // Cleanup on shutdown
-		listener.Close()
-		os.Remove(endpoint)
+		_ = listener.Close()
+		_ = os.Remove(endpoint)
 	}()
 
 	providerSrv, err := server.NewServer()

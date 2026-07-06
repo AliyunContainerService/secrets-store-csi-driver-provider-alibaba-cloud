@@ -1,0 +1,30 @@
+# ============================================================================
+# Test Case: TC-011 Post-Deletion Secret Cleanup Test (Pod)
+# Objective: Verify K8s Secret is automatically cleaned up after Pod deletion
+# Auth Method: Inherits current Provider authentication configuration
+# Prerequisite: CSI Driver must have syncSecret.enabled=true
+# ============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cleanup-test
+  namespace: ${NAMESPACE}
+  labels:
+    test-case: TC-011
+spec:
+  containers:
+  - name: test
+    image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: secrets
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+  volumes:
+  - name: secrets
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "cleanup-test"

@@ -3,12 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"time"
 
 	"github.com/AliyunContainerService/ack-secret-manager/pkg/utils"
-	kms "github.com/alibabacloud-go/kms-20160120/v2/client"
+	kms "github.com/alibabacloud-go/kms-20160120/v3/client"
 	oos "github.com/alibabacloud-go/oos-20190601/v4/client"
 	"github.com/alibabacloud-go/tea/tea"
 	sdkErr "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
@@ -37,7 +37,10 @@ type Limiter struct {
 	OOS OosLimiter
 }
 
-var LimiterInstance Limiter
+var (
+	Region          string
+	LimiterInstance Limiter
+)
 
 type SecretsManagerProvider struct {
 	KmsClient *kms.Client
@@ -142,25 +145,35 @@ func (smp *SecretsManagerProvider) fetchSecret(secObj *SecretObject) (ver string
 		if err != nil {
 			return "", nil, err
 		}
-		if smp.KmsClient == nil {
-			return "", nil, fmt.Errorf("kms client is empty")
+
+		client := secObj.KmsClient
+		if client == nil {
+			client = smp.KmsClient
 		}
-		return getKMSSecret(smp.KmsClient, secObj)
+
+		return getKMSSecret(client, secObj)
 	case ObjectTypeOOS:
 		err := LimiterInstance.OOS.Wait(waitTimeoutCtx)
 		if err != nil {
 			return "", nil, err
 		}
-		if smp.OosClient == nil {
-			return "", nil, fmt.Errorf("oos client is empty")
+
+		client := secObj.OosClient
+		if client == nil {
+			client = smp.OosClient
 		}
-		return getOOSSecret(smp.OosClient, secObj)
+
+		return getOOSSecret(client, secObj)
 	default:
 		return "", nil, fmt.Errorf("Secret type  %s not support. Only support kms and oos", secObj.ObjectType)
 	}
 }
 
 func getKMSSecret(c *kms.Client, secObj *SecretObject) (string, *SecretValue, error) {
+	if c == nil {
+		return "", nil, fmt.Errorf("kms client is empty")
+	}
+
 	request := &kms.GetSecretValueRequest{
 		SecretName: tea.String(secObj.ObjectName),
 	}
@@ -172,21 +185,21 @@ func getKMSSecret(c *kms.Client, secObj *SecretObject) (string, *SecretValue, er
 	}
 	response, err := c.GetSecretValue(request)
 	if err != nil {
-		klog.Error(err, "failed to get %s secret value from kms, err = %s", secObj.ObjectName, err.Error())
+		klog.Errorf("%v failed to get %s secret value from kms, err = %s", err, secObj.ObjectName, err.Error())
 		if !judgeNeedRetry(err) {
-			klog.Error(err, "failed to get secret value from kms", "key", secObj.ObjectName)
+			klog.Error(err, " failed to get secret value from kms ", "key ", secObj.ObjectName)
 			return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
 		} else {
 			time.Sleep(getWaitTimeExponential(1))
 			response, err = c.GetSecretValue(request)
 			if err != nil {
-				klog.Error(err, "failed to get secret value from kms", "key", secObj.ObjectName)
+				klog.Error(err, " failed to get secret value from kms ", "key ", secObj.ObjectName)
 				return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
 			}
 		}
 	}
 	if *response.Body.SecretDataType == utils.BinaryType {
-		klog.Error(err, "not support binary type yet", "key", secObj.ObjectName)
+		klog.Error(err, " not support binary type yet", "key", secObj.ObjectName)
 		return "", nil, fmt.Errorf("Secret type not support at %s: %s", secObj.ObjectName, err.Error())
 
 	}
@@ -195,6 +208,10 @@ func getKMSSecret(c *kms.Client, secObj *SecretObject) (string, *SecretValue, er
 }
 
 func getOOSSecret(c *oos.Client, secObj *SecretObject) (string, *SecretValue, error) {
+	if c == nil {
+		return "", nil, fmt.Errorf("oos client is empty")
+	}
+
 	request := &oos.GetSecretParameterRequest{
 		Name:           tea.String(secObj.ObjectName),
 		WithDecryption: tea.Bool(true),
@@ -202,19 +219,19 @@ func getOOSSecret(c *oos.Client, secObj *SecretObject) (string, *SecretValue, er
 	response, err := c.GetSecretParameter(request)
 	if err != nil {
 		if !judgeNeedRetry(err) {
-			klog.Error(err, "failed to get secret value from oos", "key", secObj.ObjectName)
+			klog.Error(err, " failed to get secret value from oos ", "key ", secObj.ObjectName)
 			return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
 		} else {
 			time.Sleep(getWaitTimeExponential(1))
 			response, err = c.GetSecretParameter(request)
 			if err != nil {
-				klog.Error(err, "failed to get secret value from oos", "key", secObj.ObjectName)
+				klog.Error(err, " failed to get secret value from oos ", "key ", secObj.ObjectName)
 				return "", nil, fmt.Errorf("Failed fetching secret %s: %s", secObj.ObjectName, err.Error())
 			}
 		}
 	}
 	if *response.Body.Parameter.Value == utils.BinaryType {
-		klog.Error(err, "not support binary type yet", "key", secObj.ObjectName)
+		klog.Error(err, " not support binary type yet", "key", secObj.ObjectName)
 		return "", nil, fmt.Errorf("Secret type not support at %s: %s", secObj.ObjectName, err.Error())
 
 	}
@@ -241,7 +258,7 @@ func getWaitTimeExponential(retryTimes int) time.Duration {
 
 // Reload a secret from the file system.
 func (p *SecretsManagerProvider) reloadSecret(secObj *SecretObject) (val *SecretValue, e error) {
-	sValue, err := ioutil.ReadFile(secObj.GetMountPath())
+	sValue, err := os.ReadFile(secObj.GetMountPath())
 	if err != nil {
 		return nil, err
 	}

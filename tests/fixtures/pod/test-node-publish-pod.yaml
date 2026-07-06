@@ -1,0 +1,31 @@
+# ============================================================================
+# Test Case: TC-004 Node Publish Secret Authentication Test (Pod)
+# Objective: Verify accessing KMS secrets via nodePublishSecretRef credential passing
+# Auth Method: Node Publish Secret
+# ============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-publish-test
+  namespace: ${NAMESPACE}
+  labels:
+    test-case: TC-004
+spec:
+  containers:
+  - name: test
+    image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: secrets
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+  volumes:
+  - name: secrets
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      nodePublishSecretRef:
+        name: node-publish-credentials
+      volumeAttributes:
+        secretProviderClass: "node-publish-test"

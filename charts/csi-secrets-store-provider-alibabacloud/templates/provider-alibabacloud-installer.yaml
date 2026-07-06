@@ -4,7 +4,8 @@ kind: DaemonSet
 metadata:
   name: {{ template "csspa.fullname" . }}
   namespace: {{ .Release.Namespace }}
-{{ include "csspa.labels" . | indent 2 }}
+  labels:
+{{- include "csspa.labels" . | nindent 4 }}
 spec:
   updateStrategy:
 {{ toYaml .Values.linux.updateStrategy | indent 4 }}
@@ -13,15 +14,14 @@ spec:
       app: {{ template "csspa.name" . }}
   template:
     metadata:
-{{ include "csspa.labels" . | indent 6 }}
+      labels:
+{{- include "csspa.labels" . | nindent 8 }}
 {{- if .Values.linux.podLabels }}
 {{- toYaml .Values.linux.podLabels | nindent 8 }}
 {{- end }}
-{{- if or .Values.linux.podAnnotations .Values.enableArcExtension }}
+{{- if .Values.linux.podAnnotations }}
       annotations:
-{{- if .Values.linux.podAnnotations}}
 {{- toYaml .Values.linux.podAnnotations | nindent 8 }}
-{{- end }}
 {{- end }}
     spec:
       {{- if .Values.imagePullSecrets }}
@@ -42,6 +42,7 @@ spec:
             - --healthz-port={{ .Values.linux.healthzPort }}
             - --healthz-path={{ .Values.linux.healthzPath }}
             - --healthz-timeout={{ .Values.linux.healthzTimeout }}
+            - --region={{ .Values.regionId }}
           livenessProbe:
             httpGet:
               path: {{ .Values.linux.healthzPath }}
@@ -62,15 +63,28 @@ spec:
           env:
             # Params for env vars populated from k8s secrets
           {{- range $key, $value := .Values.envVarsFromSecret }}
+            {{- if $value.secretKeyRef }}
             - name: {{ $key }}
               valueFrom:
                 secretKeyRef:
                   name: {{ $value.secretKeyRef | quote }}
                   key: {{ $value.key | quote }}
+            {{- end }}
+          {{- end }}
+            # RRSA OIDC Provider configuration (auto-construct)
+          {{- if .Values.rrsa.accountId }}
+            - name: ALICLOUD_ACCOUNT_ID
+              value: {{ .Values.rrsa.accountId | quote }}
+          {{- end }}
+          {{- if .Values.rrsa.clusterId }}
+            - name: ALICLOUD_CLUSTER_ID
+              value: {{ .Values.rrsa.clusterId | quote }}
           {{- end }}
           volumeMounts:
             - name: provider-vol
               mountPath: /provider
+            - name: tmp
+              mountPath: /tmp
             {{- if .Values.rrsa.enable }}
             - mountPath: /var/run/secrets/tokens
               name: csi-secrets-store-provider-alibabacloud
@@ -87,6 +101,10 @@ spec:
         - name: provider-vol
           hostPath:
             path: {{ .Values.linux.providersDir }}
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 10Mi
         {{- if .Values.rrsa.enable }}
         - name: csi-secrets-store-provider-alibabacloud
           projected:

@@ -1,0 +1,28 @@
+{{- if .Values.rbac.install }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: csi-secrets-store-provider-alibabacloud
+  labels:
+    {{- include "csspa.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: csi-secrets-store-provider-alibabacloud-binding
+  labels:
+    {{- include "csspa.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: csi-secrets-store-provider-alibabacloud
+subjects:
+  - kind: ServiceAccount
+    name: csi-secrets-store-provider-alibabacloud
+    namespace: {{ .Release.Namespace }}
+{{- end }}

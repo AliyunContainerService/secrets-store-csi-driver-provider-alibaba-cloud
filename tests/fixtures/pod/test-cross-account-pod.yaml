@@ -1,0 +1,50 @@
+# ============================================================================
+# Test Case: TC-006 Cross-account Authentication Test (Pod)
+# Objective: Verify cross-account KMS secret access functionality
+# Auth Method: Cross-account AssumeRole (specify target account Role via targetRoleArn)
+# ============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cross-account-test
+  namespace: ${NAMESPACE}  # Test namespace
+  labels:
+    test-type: cross-account-authentication
+    test-case: TC-006
+    version: v0.6.0
+spec:
+  containers:
+  - name: test-container
+    image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
+    imagePullPolicy: IfNotPresent
+    command:
+    - "/bin/sh"
+    - "-c"
+    - |
+      echo "Starting cross-account authentication test..."
+      echo "Checking mounted secrets..."
+      ls -la /mnt/secrets-store/
+      echo "Reading cross-account secret..."
+      cat /mnt/secrets-store/${CROSS_ACCOUNT_SECRET_NAME}
+      echo ""
+      echo "Test completed successfully!"
+      sleep 3600
+    volumeMounts:
+    - name: secrets-store-inline
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "128Mi"
+        cpu: "200m"
+  volumes:
+  - name: secrets-store-inline
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "cross-account-test"

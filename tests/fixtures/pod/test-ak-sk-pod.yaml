@@ -1,0 +1,29 @@
+# ============================================================================
+# Test Case: TC-005 AK/SK Authentication Test (Pod)
+# Objective: Verify AK/SK access to KMS secrets
+# Auth Method: AK/SK (credentials passed via nodePublishSecretRef)
+# ============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aksk-test
+  namespace: staging
+  labels:
+    test-case: TC-005
+spec:
+  containers:
+  - name: test
+    image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: secrets
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+  volumes:
+  - name: secrets
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "aksk-test"

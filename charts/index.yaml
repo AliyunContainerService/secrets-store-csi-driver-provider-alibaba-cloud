@@ -2,13 +2,33 @@ apiVersion: v1
 entries:
   csi-secrets-store-provider-alibabacloud:
   - apiVersion: v1
-    appVersion: 0.3.0
-    created: "2024-11-27T16:28:49.3196364+08:00"
+    appVersion: 0.6.0
+    created: "2026-06-25T14:56:03.465039+08:00"
+    description: A Helm chart for deploying the Secrets Store CSI Driver Provider
+      for Alibaba Cloud, supporting multiple authentication methods including AK/SK,
+      RAM Role, RRSA/OIDC, ECS RAM Role, and Node Publish Secret.
+    digest: 36193cf20e1e648525ee83ce5e8fe6779497a1c328b1d6e4e2f4f2cafbb62fd0
+    home: https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud
+    keywords:
+    - releaseName:csi-secrets-store-provider-alibabacloud
+    - arch:amd64
+    - namespace:kube-system
+    - supportType:ExternalKubernetes,Kubernetes,ManagedKubernetes
+    kubeVersion: '>=1.30.0-0'
+    name: csi-secrets-store-provider-alibabacloud
+    sources:
+    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud
+    urls:
+    - csi-secrets-store-provider-alibabacloud-0.6.0.tgz
+    version: 0.6.0
+  - apiVersion: v1
+    appVersion: 0.5.0
+    created: "2026-06-25T14:56:03.4632717+08:00"
     description: A Helm chart to install the Secrets Store CSI Driver, the Alibaba
       Cloud KMS Secret Manager and OOS Eencrypted Parameter Provider inside a Kubernetes
       cluster.
-    digest: 52ff9d0209df271bd5a261ac0a81c6a7086a51b6a98499913ef9d258a27560c4
-    home: https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/charts
+    digest: b3f7b69aeffaa3e031574d7b5c69550e3e78635626d4740c992e5706fd3063d0
+    home: https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
     keywords:
     - releaseName:csi-secrets-store-provider-alibabacloud
     - arch:amd64
@@ -17,36 +37,76 @@ entries:
     kubeVersion: '>=1.16.0-0'
     name: csi-secrets-store-provider-alibabacloud
     sources:
-    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud
+    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
     urls:
-    - https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/main/charts/csi-secrets-store-provider-alibabacloud-0.3.0.tgz
+    - csi-secrets-store-provider-alibabacloud-0.5.0.tgz
+    version: 0.5.0
+  - apiVersion: v1
+    appVersion: 0.4.0
+    created: "2026-06-25T14:56:03.460423+08:00"
+    description: A Helm chart to install the Secrets Store CSI Driver, the Alibaba
+      Cloud KMS Secret Manager and OOS Eencrypted Parameter Provider inside a Kubernetes
+      cluster.
+    digest: de365d5f78af9b611425f3da275a0b17665da4dd55d83517f96abee23fa10968
+    home: https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
+    keywords:
+    - releaseName:csi-secrets-store-provider-alibabacloud
+    - arch:amd64
+    - namespace:kube-system
+    - supportType:ExternalKubernetes,Kubernetes,ManagedKubernetes
+    kubeVersion: '>=1.16.0-0'
+    name: csi-secrets-store-provider-alibabacloud
+    sources:
+    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
+    urls:
+    - csi-secrets-store-provider-alibabacloud-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v1
+    appVersion: 0.3.0
+    created: "2026-06-25T14:56:03.4590889+08:00"
+    description: A Helm chart to install the Secrets Store CSI Driver, the Alibaba
+      Cloud KMS Secret Manager and OOS Eencrypted Parameter Provider inside a Kubernetes
+      cluster.
+    digest: 14b8d39c7c47198c4771ce10d3d09d79f6e536409e3f45d5440882378a5a99f4
+    home: https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
+    keywords:
+    - releaseName:csi-secrets-store-provider-alibabacloud
+    - arch:amd64
+    - namespace:kube-system
+    - supportType:ExternalKubernetes,Kubernetes,ManagedKubernetes
+    kubeVersion: '>=1.16.0-0'
+    name: csi-secrets-store-provider-alibabacloud
+    sources:
+    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
+    urls:
+    - csi-secrets-store-provider-alibabacloud-0.3.0.tgz
     version: 0.3.0
   - apiVersion: v1
     appVersion: 0.2.0
-    created: "2024-11-27T16:28:49.3175869+08:00"
+    created: "2026-06-25T14:56:03.4574405+08:00"
     description: A Helm chart to install the Secrets Store CSI Driver and the Alibaba
       Cloud KMS Secret Manager Provider inside a Kubernetes cluster.
     digest: 9d26d57d2e551be3ef0c15efcf22e01cad45f6011f970f624ae78c9c1d9a9382
-    home: https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/charts
+    home: https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
     kubeVersion: '>=1.16.0-0'
     name: csi-secrets-store-provider-alibabacloud
     sources:
-    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud
+    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
     urls:
-    - https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/main/charts/csi-secrets-store-provider-alibabacloud-0.2.0.tgz
+    - csi-secrets-store-provider-alibabacloud-0.2.0.tgz
     version: 0.2.0
   - apiVersion: v1
     appVersion: 0.1.0
-    created: "2024-11-27T16:28:49.315417+08:00"
+    created: "2026-06-25T14:56:03.4560677+08:00"
     description: A Helm chart to install the Secrets Store CSI Driver and the Alibaba
       Cloud KMS Secret Manager Provider inside a Kubernetes cluster.
     digest: 94b65d1ede3dc3143d8385ad76446a8140fd50dc0cf8ce85e088aa2c14e83302
-    home: https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/charts
+    home: https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
     kubeVersion: '>=1.16.0-0'
     name: csi-secrets-store-provider-alibabacloud
     sources:
-    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud
+    - https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibabacloud
     urls:
-    - https://raw.githubusercontent.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/main/charts/csi-secrets-store-provider-alibabacloud-0.1.0.tgz
+    - csi-secrets-store-provider-alibabacloud-0.1.0.tgz
     version: 0.1.0
-generated: "2024-11-27T16:28:49.3137425+08:00"
+generated: "2026-06-25T14:56:03.4544646+08:00"

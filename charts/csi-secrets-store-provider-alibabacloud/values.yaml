@@ -9,8 +9,8 @@ regionId: __ACK_REGION_ID__
 
 linux:
   image:
-    repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud
-    tag: v0.3.0
+    repository: registry-__ACK_REGION_ID__.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud
+    tag: v0.6.0
     pullPolicy: Always
   nodeSelector: {}
   tolerations: []
@@ -59,32 +59,34 @@ secrets-store-csi-driver:
     metricsAddr: ":8080"
     image:
       repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-driver
-      tag: v1.4.6
+      tag: v1.6.0
       pullPolicy: Always
     providersDir: /var/run/secrets-store-csi-providers
     registrarImage:
       repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-node-driver-registrar
-      tag: v2.11.1
+      tag: v2.16.0
       pullPolicy: Always
     livenessProbeImage:
       repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-livenessprobe
-      tag: v2.13.1
+      tag: v2.18.0
       pullPolicy: Always
     crds:
       image:
         repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-driver-crds
-        tag: v1.4.6
+        tag: v1.6.0
         pullPolicy: Always
 
   enableSecretRotation: false
   rotationPollInterval: 2m
-  # Refer to https://secrets-store-csi-driver.sigs.k8s.io/load-tests.html for more details on actions to take before enabling this feature
-  filteredWatchSecret: true
+
+  # Token requests for Pod SA RRSA authentication
+  tokenRequests:
+  - audience: "sts.aliyuncs.com"
 
   syncSecret:
     enabled: false
 
-#envVarsFromSecret:
+# envVarsFromSecret:
 #  ACCESS_KEY_ID:
 #    secretKeyRef: alibaba-credentials
 #    key: id
@@ -105,9 +107,31 @@ secrets-store-csi-driver:
 #    key: oidcproviderarn
 
 rrsa:
-  # Specifies whether using rrsa and enalbe sa token volume projection, default is false
+  # Specifies whether using rrsa and enable sa token volume projection, default is false
+  # Set to true to enable RRSA authentication (Provider SA or Pod SA)
+  # NOTE: This feature is in alpha and only available in ACK managed clusters and ACK Lingjun clusters.
+  # When enabled:
+  #   - Provider mounts its own SA token via projected volume (for Provider SA RRSA auth)
+  #   - Pod SA tokens are automatically passed by CSI Driver via NodePublishVolume secrets
   enable: false
+  
+  # RRSA OIDC Provider configuration
+  # Option 1: Auto-construct OIDC Provider ARN from account ID and cluster ID (recommended)
+  # The provider will automatically construct it using:
+  # Format: acs:ram::<accountId>:oidc-provider/ack-rrsa-<clusterId>
+  accountId: ""
+  clusterId: ""
+  #
+  # Option 2: Explicitly specify OIDC Provider ARN via envVarsFromSecret
+  # Create a K8s Secret with ALICLOUD_OIDC_PROVIDER_ARN and reference it via envVarsFromSecret:
+  #   kubectl create secret generic alibaba-credentials -n kube-system \
+  #     --from-literal=oidcproviderarn=acs:ram::<accountId>:oidc-provider/<providerName>
+  # Then configure envVarsFromSecret as a Map (not a string):
+  #   envVarsFromSecret:
+  #     ALICLOUD_OIDC_PROVIDER_ARN:
+  #       secretKeyRef: alibaba-credentials
+  #       key: oidcproviderarn
 
-## Install default service account
+## Install default service account and RBAC
 rbac:
   install: true
