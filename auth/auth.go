@@ -143,7 +143,7 @@ func (c *podServiceAccountAuth) NewCredential() (credentials.Credential, error) 
 	tokenData, exists := tokens["sts.aliyuncs.com"]
 	if !exists || tokenData.Token == "" {
 		return nil, fmt.Errorf(
-			"Pod SA token not found for audience 'sts.aliyuncs.com' (namespace=%s, serviceAccount=%s). Skipping Pod SA authentication, falling back to next auth method.", c.podNamespace, c.podServiceAccount)
+			"pod SA token not found for audience 'sts.aliyuncs.com' (namespace=%s, serviceAccount=%s); skipping Pod SA authentication, falling back to next auth method", c.podNamespace, c.podServiceAccount)
 	}
 
 	// Write token to temporary file for credentials SDK.

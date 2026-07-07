@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2"
 )
 
 // CleanupNamespace deletes a namespace and waits for it to be fully removed
@@ -57,35 +57,35 @@ type CloudResourceManager interface {
 
 // DeferCleanupNamespace registers a namespace cleanup with Ginkgo's DeferCleanup
 func DeferCleanupNamespace(ctx context.Context, f *Framework, namespace string) {
-	DeferCleanup(func() {
+	ginkgo.DeferCleanup(func() {
 		CleanupNamespace(ctx, f, namespace)
 	})
 }
 
 // DeferCleanupSPC registers a SecretProviderClass cleanup with Ginkgo's DeferCleanup
 func DeferCleanupSPC(ctx context.Context, f *Framework, namespace, spcName string) {
-	DeferCleanup(func() {
+	ginkgo.DeferCleanup(func() {
 		_ = f.DeleteSecretProviderClass(ctx, namespace, spcName)
 	})
 }
 
 // DeferCleanupPod registers a Pod cleanup with Ginkgo's DeferCleanup
 func DeferCleanupPod(ctx context.Context, f *Framework, namespace, podName string) {
-	DeferCleanup(func() {
+	ginkgo.DeferCleanup(func() {
 		_ = f.DeletePod(ctx, namespace, podName)
 	})
 }
 
 // DeferCleanupKMS registers a KMS Secret cleanup with Ginkgo's DeferCleanup
 func DeferCleanupKMS(rm CloudResourceManager, secretName string) {
-	DeferCleanup(func() {
+	ginkgo.DeferCleanup(func() {
 		CleanupKMSSecret(rm, secretName)
 	})
 }
 
 // DeferCleanupRAM registers RAM resource cleanup with Ginkgo's DeferCleanup
 func DeferCleanupRAM(rm CloudResourceManager, policyNames, roleNames []string) {
-	DeferCleanup(func() {
+	ginkgo.DeferCleanup(func() {
 		CleanupRAMResources(rm, policyNames, roleNames)
 	})
 }
@@ -167,6 +167,6 @@ func (tc *TestCleanup) Run() {
 	CleanupRAMResources(tc.rm, tc.ramPolicies, tc.ramRoles)
 
 	if len(errs) > 0 {
-		GinkgoWriter.Printf("Cleanup warnings: %v\n", errs)
+		ginkgo.GinkgoWriter.Printf("Cleanup warnings: %v\n", errs)
 	}
 }

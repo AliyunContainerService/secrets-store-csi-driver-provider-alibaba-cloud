@@ -52,7 +52,9 @@ func TestServe(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
 			socketPath := fmt.Sprintf("%s/alibabacloud.sock", getTempTestDir(t))
-			defer os.Remove(socketPath)
+			defer func() {
+				_ = os.Remove(socketPath)
+			}()
 
 			test.setupServer(socketPath)
 
@@ -82,7 +84,9 @@ func TestServe(t *testing.T) {
 
 func TestCheckRPC(t *testing.T) {
 	socketPath := fmt.Sprintf("%s/alibabacloud.sock", getTempTestDir(t))
-	defer os.Remove(socketPath)
+	defer func() {
+		_ = os.Remove(socketPath)
+	}()
 
 	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
@@ -129,7 +133,9 @@ func doHealthCheck(t *testing.T, url string) (int, []byte) {
 	if err != nil {
 		t.Fatalf("failed to invoke http request, err: %+v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("failed to read response body, err: %+v", err)

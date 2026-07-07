@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // Labels allows you to present labels independently from their storage.
@@ -29,6 +31,9 @@ type Labels interface {
 
 	// Get returns the value for the provided label.
 	Get(label string) (value string)
+
+	// Lookup returns the value for the provided label if it exists and whether the provided label exist
+	Lookup(label string) (value string, exists bool)
 }
 
 // Set is a map of label:value. It implements Labels.
@@ -57,6 +62,12 @@ func (ls Set) Get(label string) string {
 	return ls[label]
 }
 
+// Lookup returns the value for the provided label if it exists and whether the provided label exist
+func (ls Set) Lookup(label string) (string, bool) {
+	val, exists := ls[label]
+	return val, exists
+}
+
 // AsSelector converts labels into a selectors. It does not
 // perform any validation, which means the server will reject
 // the request if the Set contains invalid values.
@@ -75,11 +86,13 @@ func (ls Set) AsValidatedSelector() (Selector, error) {
 // perform any validation.
 // According to our measurements this is significantly faster
 // in codepaths that matter at high scale.
+// Note: this method copies the Set; if the Set is immutable, consider wrapping it with ValidatedSetSelector
+// instead, which does not copy.
 func (ls Set) AsSelectorPreValidated() Selector {
 	return SelectorFromValidatedSet(ls)
 }
 
-// FormatLabels convert label map into plain string
+// FormatLabels converts label map into plain string
 func FormatLabels(labelMap map[string]string) string {
 	l := Set(labelMap).String()
 	if l == "" {
@@ -143,7 +156,7 @@ func Equals(labels1, labels2 Set) bool {
 
 // ConvertSelectorToLabelsMap converts selector string to labels map
 // and validates keys and values
-func ConvertSelectorToLabelsMap(selector string) (Set, error) {
+func ConvertSelectorToLabelsMap(selector string, opts ...field.PathOption) (Set, error) {
 	labelsMap := Set{}
 
 	if len(selector) == 0 {
@@ -157,11 +170,11 @@ func ConvertSelectorToLabelsMap(selector string) (Set, error) {
 			return labelsMap, fmt.Errorf("invalid selector: %s", l)
 		}
 		key := strings.TrimSpace(l[0])
-		if err := validateLabelKey(key); err != nil {
+		if err := validateLabelKey(key, field.ToPath(opts...)); err != nil {
 			return labelsMap, err
 		}
 		value := strings.TrimSpace(l[1])
-		if err := validateLabelValue(key, value); err != nil {
+		if err := validateLabelValue(key, value, field.ToPath(opts...)); err != nil {
 			return labelsMap, err
 		}
 		labelsMap[key] = value

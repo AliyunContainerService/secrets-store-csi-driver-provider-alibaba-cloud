@@ -242,13 +242,13 @@ func isRRSAEnabled(clusterID string) (bool, error) {
 func ensureRRSAEnabled() error {
 	clusterID := TestCfg.ClusterID
 	if clusterID == "" {
-		return fmt.Errorf("ClusterID not set, cannot verify RRSA status\n")
+		return fmt.Errorf("clusterID not set, cannot verify RRSA status")
 	}
 
 	// Check cluster RRSA status
 	enabled, err := isRRSAEnabled(clusterID)
 	if err != nil {
-		return fmt.Errorf("Failed to check RRSA status: %v\n", err)
+		return fmt.Errorf("failed to check RRSA status: %v", err)
 	}
 	if enabled {
 		fmt.Println("RRSA is already enabled on the cluster")
@@ -258,7 +258,7 @@ func ensureRRSAEnabled() error {
 	// Enable RRSA (idempotent: repeated calls have no side effects)
 	fmt.Println("Enabling RRSA on cluster...")
 	if _, err := execAliyunWithRetry(3, "cs", "PUT", "/api/v2/clusters/"+clusterID, "--region", TestCfg.RegionID, "--header", "Content-Type=application/json", "--body", "{\"enable_rrsa\":true}"); err != nil {
-		return fmt.Errorf("Failed to enable RRSA: %v\n", err)
+		return fmt.Errorf("failed to enable RRSA: %v", err)
 	}
 
 	// Wait for RRSA to take effect by polling
@@ -277,7 +277,7 @@ func ensureRRSAEnabled() error {
 		}
 		fmt.Printf("RRSA not yet enabled, retrying... (%d/12)\n", i+1)
 	}
-	return fmt.Errorf("RRSA did not become enabled within 120s\n")
+	return fmt.Errorf("failed to enable RRSA within 120s")
 }
 
 // deployHelmChart deploys the CSI Provider Helm chart
@@ -426,13 +426,13 @@ func prepareCloudResources() error {
 	// Note: targetAccountID is the account where the OIDC Provider resides
 	// The OIDC Provider ARN should be in the format: acs:ram::<target-account-id>:oidc-provider/<cluster-id>
 	if TestCfg.OIDCProviderARN == "" {
-		return fmt.Errorf("OIDCProviderARN is required for RRSA trust policies")
+		return fmt.Errorf("required OIDCProviderARN not set for RRSA trust policies")
 	}
 	if sourceAccountID == "" {
-		return fmt.Errorf("SourceAccountID is required for RRSA configuration")
+		return fmt.Errorf("sourceAccountID is required for RRSA configuration")
 	}
 	if targetAccountID == "" {
-		return fmt.Errorf("TargetAccountID is required for RRSA configuration")
+		return fmt.Errorf("targetAccountID is required for RRSA configuration")
 	}
 	GinkgoWriter.Printf("RRSA trust policies: namespace=%s, providerSA=%s, podSA=%s, uid=%s, sourceAccountID=%s, targetAccountID=%s, oidcProviderARN=%s\n",
 		namespace, framework.ProviderDaemonSetName, podSAName, uid, sourceAccountID, targetAccountID, TestCfg.OIDCProviderARN)
@@ -614,7 +614,7 @@ func verifyExistingAuth() error {
 		framework.ProviderDaemonSetName,
 		30*time.Second)
 	if err != nil {
-		return fmt.Errorf("DaemonSet not ready: %w", err)
+		return fmt.Errorf("daemonSet not ready: %w", err)
 	}
 
 	// Check 2: Verify alibaba-credentials Secret still exists
@@ -633,7 +633,7 @@ func verifyExistingAuth() error {
 		if _, verifyErr := execAliyunWithRetry(3, "sts", "GetCallerIdentity",
 			"--access-key-id", string(ak),
 			"--access-key-secret", string(sk)); verifyErr != nil {
-			return fmt.Errorf("AK/SK credentials no longer valid: %v", verifyErr)
+			return fmt.Errorf("access key/secret credentials no longer valid: %v", verifyErr)
 		}
 	}
 

@@ -44,7 +44,9 @@ func (h *HealthZ) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// create the health check grpc client
 	client := grpc_health_v1.NewHealthClient(conn)
@@ -77,8 +79,10 @@ func (h *HealthZ) checkRPC(ctx context.Context, client grpc_health_v1.HealthClie
 }
 
 func (h *HealthZ) dialUnixSocket() (*grpc.ClientConn, error) {
+	//nolint:staticcheck // grpc.Dial is deprecated but kept for compatibility with unix socket paths on Windows
 	return grpc.Dial(
 		h.UnixSocketPath,
+		//nolint:staticcheck // grpc.WithInsecure is deprecated but kept for compatibility
 		grpc.WithInsecure(),
 		grpc.WithContextDialer(func(ctx context.Context, target string) (net.Conn, error) {
 			return (&net.Dialer{}).DialContext(ctx, "unix", target)
