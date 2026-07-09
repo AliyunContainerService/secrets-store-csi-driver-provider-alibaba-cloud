@@ -3,6 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/jmespath/go-jmespath"
 )
 
@@ -23,7 +24,7 @@ func (sv *SecretValue) getJsonSecrets() (s []*SecretValue, e error) {
 	var data interface{}
 	err := json.Unmarshal(sv.Value, &data)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid JSON used with jmesPath in secret: %s.", sv.SecretObj.ObjectName)
+		return nil, fmt.Errorf("invalid JSON used with jmesPath in secret: %s", sv.SecretObj.ObjectName)
 	}
 	//fetch all specified key value pairs`
 	for _, jmesPathEntry := range sv.SecretObj.JMESPath {
@@ -31,17 +32,17 @@ func (sv *SecretValue) getJsonSecrets() (s []*SecretValue, e error) {
 		jsonSecret, err := jmespath.Search(jmesPathEntry.Path, data)
 
 		if err != nil {
-			return nil, fmt.Errorf("Invalid JMES Path: %s.", jmesPathEntry.Path)
+			return nil, fmt.Errorf("invalid JMES Path: %s", jmesPathEntry.Path)
 		}
 
 		if jsonSecret == nil {
-			return nil, fmt.Errorf("JMES Path - %s for object alias - %s does not point to a valid object.",
+			return nil, fmt.Errorf("jmes path - %s for object alias - %s does not point to a valid object",
 				jmesPathEntry.Path, jmesPathEntry.ObjectAlias)
 		}
 
 		jsonSecretAsString, isString := jsonSecret.(string)
 		if !isString {
-			return nil, fmt.Errorf("Invalid JMES search result type for path:%s. Only string is allowed.", jmesPathEntry.Path)
+			return nil, fmt.Errorf("invalid JMES search result type for path %s; only string is allowed", jmesPathEntry.Path)
 		}
 
 		secObj := sv.SecretObj.getJmesEntrySecretObject(&jmesPathEntry)

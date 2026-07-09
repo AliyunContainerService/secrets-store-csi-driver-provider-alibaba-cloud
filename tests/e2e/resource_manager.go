@@ -122,13 +122,13 @@ func LoadTestConfig() *TestConfig {
 // Validate checks that required configuration is present
 func (c *TestConfig) Validate() error {
 	if c.SourceAccountID == "" {
-		return fmt.Errorf("SOURCE_ACCOUNT_ID is required")
+		return fmt.Errorf("source account ID (SOURCE_ACCOUNT_ID) is required")
 	}
 	if c.RegionID == "" {
-		return fmt.Errorf("REGION is required")
+		return fmt.Errorf("region (REGION) environment variable is required")
 	}
 	if c.ClusterID == "" {
-		return fmt.Errorf("CLUSTER_ID is required")
+		return fmt.Errorf("cluster ID (CLUSTER_ID) environment variable is required")
 	}
 	return nil
 }
@@ -1428,10 +1428,10 @@ func (rm *ResourceManager) GetCreatedRoles() []string {
 // SetupTargetAccountResources creates resources in target account for cross-account testing
 func (rm *ResourceManager) SetupTargetAccountResources(crossAccountSecretName string) error {
 	if rm.config.TargetAccountID == "" {
-		return fmt.Errorf("TARGET_ACCOUNT_ID not set")
+		return fmt.Errorf("target account ID (TARGET_ACCOUNT_ID) environment variable not set")
 	}
 	if rm.config.TargetAccessKeyID == "" || rm.config.TargetAccessKeySecret == "" {
-		return fmt.Errorf("TARGET_ACCOUNT_ACCESS_KEY_ID/SECRET not set")
+		return fmt.Errorf("target account credentials (TARGET_ACCOUNT_ACCESS_KEY_ID/SECRET) not set")
 	}
 
 	log.Printf("Setting up target account resources (Account: %s)", rm.config.TargetAccountID)

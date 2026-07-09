@@ -108,7 +108,7 @@ func NewSecretObjectList(mountDir, translate, objectSpec string) ([]*SecretObjec
 	specObjects := make([]*SecretObject, 0)
 	err := yaml.Unmarshal([]byte(objectSpec), &specObjects)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to load SecretProviderClass: %+v", err)
+		return nil, fmt.Errorf("failed to load SecretProviderClass: %+v", err)
 	}
 
 	// Initialize validation state
@@ -184,7 +184,7 @@ func processSecretObject(state *validationState) error {
 func (s *SecretObject) validateSecretObject() error {
 
 	if len(s.ObjectName) == 0 {
-		return fmt.Errorf("Object name must be specified")
+		return fmt.Errorf("object name must be specified")
 	}
 
 	var objARN utils.ARN
@@ -193,11 +193,11 @@ func (s *SecretObject) validateSecretObject() error {
 	if hasARN {
 		objARN, err = utils.ParseARN(s.ObjectName)
 		if err != nil {
-			return fmt.Errorf("Invalid ARN format in object name: %s", s.ObjectName)
+			return fmt.Errorf("invalid ARN format in object name: %s", s.ObjectName)
 		}
 		// Make sure the ARN is for a supported service
 		if objARN.Service != "kms" {
-			return fmt.Errorf("Invalid service in ARN: %s", objARN.Service)
+			return fmt.Errorf("invalid service in ARN: %s", objARN.Service)
 		}
 	}
 
@@ -213,11 +213,11 @@ func (s *SecretObject) validateSecretObject() error {
 	//ensure each jmesPath entry has a path and an objectalias
 	for _, jmesPathEntry := range s.JMESPath {
 		if len(jmesPathEntry.Path) == 0 {
-			return fmt.Errorf("Path must be specified for JMES object")
+			return fmt.Errorf("path must be specified for JMES object")
 		}
 
 		if len(jmesPathEntry.ObjectAlias) == 0 {
-			return fmt.Errorf("Object alias must be specified for JMES object")
+			return fmt.Errorf("object alias must be specified for JMES object")
 		}
 	}
 

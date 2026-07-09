@@ -111,7 +111,7 @@ func (s *CSIDriverProviderServer) Mount(ctx context.Context, req *v1alpha1.Mount
 
 	// Basic sanity check
 	if len(req.GetTargetPath()) == 0 {
-		return nil, fmt.Errorf("Missing mount path")
+		return nil, fmt.Errorf("missing mount path")
 	}
 	mountDir := req.GetTargetPath()
 
@@ -505,7 +505,12 @@ func (s *CSIDriverProviderServer) Check(ctx context.Context, in *grpc_health_v1.
 	}, nil
 }
 
+// List returns the health status of all available services.
+func (s *CSIDriverProviderServer) List(ctx context.Context, in *grpc_health_v1.HealthListRequest) (*grpc_health_v1.HealthListResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "List is not supported")
+}
+
 // Watch for the serving status of the requested service.
-func (s *CSIDriverProviderServer) Watch(req *grpc_health_v1.HealthCheckRequest, w grpc_health_v1.Health_WatchServer) error {
+func (s *CSIDriverProviderServer) Watch(req *grpc_health_v1.HealthCheckRequest, w grpc.ServerStreamingServer[grpc_health_v1.HealthCheckResponse]) error {
 	return status.Error(codes.Unimplemented, "Watch is not supported")
 }
