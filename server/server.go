@@ -41,6 +41,7 @@ const (
 	defaultOosEndpoint              = "oos-vpc.%s.aliyuncs.com"
 	suffix                          = "cryptoservice.kms.aliyuncs.com"
 	usePodServiceAccountTokenAttrib = "usePodServiceAccountToken"
+	roleArnAnnotation               = "ack.alibabacloud.com/role-arn"
 )
 
 // A Secrets Store CSI Driver provider implementation for Alibaba Cloud Secrets Manager.
@@ -95,7 +96,7 @@ func getRoleArnFromServiceAccount(ctx context.Context, namespace, serviceAccount
 		return "", nil
 	}
 
-	roleArn := sa.Annotations["ack.alibabacloud.com/role-arn"]
+	roleArn := sa.Annotations[roleArnAnnotation]
 	return roleArn, nil
 }
 
@@ -153,15 +154,19 @@ func (s *CSIDriverProviderServer) Mount(ctx context.Context, req *v1alpha1.Mount
 	usePodSA := attrib[usePodServiceAccountTokenAttrib] == "true"
 
 	// Get RoleArn from ServiceAccount annotation (the only source for Pod SA RRSA auth)
-	// If RoleArn is empty, Pod SA auth will be skipped and fallback to next auth method.
+	// When Pod SA auth is explicitly enabled, a missing/unreadable RoleArn is a hard
+	// failure: the Mount request must fail rather than silently falling back to another
+	// auth method.
 	var podSARoleArn string
 	if usePodSA {
 		roleArnFromSA, err := getRoleArnFromServiceAccount(ctx, nameSpace, svcAcct)
 		if err != nil {
-			klog.Warningf("Failed to get RoleArn from ServiceAccount annotation: %v", err)
-		} else {
-			podSARoleArn = roleArnFromSA
+			return nil, fmt.Errorf("failed to get RoleArn from ServiceAccount %s/%s annotation: %w", nameSpace, svcAcct, err)
 		}
+		if roleArnFromSA == "" {
+			return nil, fmt.Errorf("usePodServiceAccountToken is enabled but the %q annotation is missing on ServiceAccount %s/%s; please configure the annotation with the RRSA Role ARN", roleArnAnnotation, nameSpace, svcAcct)
+		}
+		podSARoleArn = roleArnFromSA
 	}
 
 	// Build Pod SA information

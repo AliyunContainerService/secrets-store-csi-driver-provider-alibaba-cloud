@@ -5,13 +5,13 @@ imagePullSecrets: []
 # log level. Uses V logs (klog)
 logVerbosity: 0
 
-regionId: __ACK_REGION_ID__
+regionId: cn-hangzhou
 
 linux:
   image:
-    repository: registry-__ACK_REGION_ID__.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud
-    tag: v0.7.0
-    pullPolicy: Always
+    repository: registry-cn-hangzhou.ack.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud
+    tag: v0.8.0
+    pullPolicy: IfNotPresent
   nodeSelector: {}
   tolerations: []
   enabled: true
@@ -58,23 +58,23 @@ secrets-store-csi-driver:
     kubeletRootDir: /var/lib/kubelet
     metricsAddr: ":8080"
     image:
-      repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-driver
+      repository: registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-driver
       tag: v1.6.0
-      pullPolicy: Always
+      pullPolicy: IfNotPresent
     providersDir: /var/run/secrets-store-csi-providers
     registrarImage:
-      repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-node-driver-registrar
+      repository: registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-node-driver-registrar
       tag: v2.16.0
-      pullPolicy: Always
+      pullPolicy: IfNotPresent
     livenessProbeImage:
-      repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-livenessprobe
+      repository: registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-livenessprobe
       tag: v2.18.0
-      pullPolicy: Always
+      pullPolicy: IfNotPresent
     crds:
       image:
-        repository: registry.__ACK_REGION_ID__.aliyuncs.com/acs/csi-secrets-store-driver-crds
+        repository: registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-driver-crds
         tag: v1.6.0
-        pullPolicy: Always
+        pullPolicy: IfNotPresent
 
   enableSecretRotation: false
   rotationPollInterval: 2m

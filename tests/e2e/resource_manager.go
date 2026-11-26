@@ -70,6 +70,12 @@ type TestConfig struct {
 	// Region for KMS endpoint
 	RegionID string
 
+	// CS (Container Service) API endpoint override for `aliyun cs` calls.
+	// Empty = use the CLI default production endpoint (cs.<region>.aliyuncs.com);
+	// set to a pre-release host (e.g. cs-pre.aliyuncs.com) when the target
+	// cluster only exists in a non-production environment.
+	CSEndpoint string
+
 	// Test control
 	SkipCrossAccount   bool
 	SkipProviderDeploy bool
@@ -95,6 +101,7 @@ func LoadTestConfig() *TestConfig {
 		TargetEncryptionKeyID: os.Getenv("TARGET_ACCOUNT_ENCRYPTION_KEY_ID"),
 		TargetDKMSInstanceID:  os.Getenv("TARGET_ACCOUNT_DKMS_INSTANCE_ID"),
 		RegionID:              os.Getenv("REGION"),
+		CSEndpoint:            os.Getenv("CS_ENDPOINT"),
 		SkipCrossAccount:      os.Getenv("SKIP_CROSS_ACCOUNT") == "true",
 		SkipProviderDeploy:    os.Getenv("SKIP_PROVIDER_DEPLOY") == "true",
 		AutoCleanupKMS:        os.Getenv("AUTO_CLEANUP_KMS") != "false",
@@ -906,6 +913,18 @@ func (rm *ResourceManager) DeleteRAMUserWithKMSPolicy(username, accessKeyId, kms
 	log.Printf("Warning: failed to delete RAM user %s after %d retries", username, maxRetries)
 }
 
+// csEndpointArgs returns the --endpoint override args for `aliyun cs` calls.
+// Returns nil when endpoint is empty so the CLI falls back to its default
+// production endpoint (cs.<region>.aliyuncs.com). Set CS_ENDPOINT to a
+// pre-release host (e.g. cs-pre.aliyuncs.com) when the target cluster only
+// exists in a non-production environment.
+func csEndpointArgs(endpoint string) []string {
+	if endpoint != "" {
+		return []string{"--endpoint", endpoint}
+	}
+	return nil
+}
+
 // GetECSWorkerRoleName retrieves the ECS worker RAM role name for the cluster (with retry for DNS timeouts)
 func (rm *ResourceManager) GetECSWorkerRoleName() (string, error) {
 	const maxRetries = 3
@@ -914,9 +933,11 @@ func (rm *ResourceManager) GetECSWorkerRoleName() (string, error) {
 	var output []byte
 	var err error
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		cmd := exec.Command("aliyun", "cs", "GET", "/clusters/"+rm.config.ClusterID,
-			"--region", rm.config.RegionID,
-			"--header", "Content-Type=application/json")
+		csArgs := []string{"cs", "GET", "/clusters/" + rm.config.ClusterID,
+			"--region", rm.config.RegionID}
+		csArgs = append(csArgs, csEndpointArgs(rm.config.CSEndpoint)...)
+		csArgs = append(csArgs, "--header", "Content-Type=application/json")
+		cmd := exec.Command("aliyun", csArgs...)
 		output, err = cmd.CombinedOutput()
 		if err == nil {
 			break

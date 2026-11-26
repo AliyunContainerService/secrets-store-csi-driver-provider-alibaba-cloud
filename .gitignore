@@ -1,0 +1,18 @@
+# Test credentials (copy of tests/.env.example with real values, never commit)
+tests/.env
+
+# Test run artifacts (logs, reports, diagnostics snapshots)
+tests/test-logs-*/
+
+# Test script backup residue (tests/scripts/run-tests.sh)
+*.bak
+
+# Build artifacts (Makefile)
+build/
+bin/
+cover.out
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/

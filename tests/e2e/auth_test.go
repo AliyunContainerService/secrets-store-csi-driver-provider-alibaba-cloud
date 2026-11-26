@@ -2,8 +2,10 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os/exec"
 	"strings"
@@ -300,6 +302,123 @@ func cleanupTestResources(ctx context.Context, namespace string) {
 }
 
 // ============================================================================
+// Explicit assertions for the "in-memory Pod SA token" (non-disk) code path
+// introduced in v0.8.0.
+// ============================================================================
+
+const (
+	// providerContainerName is the container name inside the Provider DaemonSet.
+	providerContainerName = "provider-alibabacloud-installer"
+	// podSAAuthLogMarker is the V=0 log line emitted by auth.podServiceAccountAuth
+	// on successful credential construction (see auth/auth.go). Default chart
+	// logVerbosity is unset (-v=0), so the V=4 "Using in-memory Pod SA token"
+	// marker is NOT visible; we rely on this V=0 marker instead to prove the
+	// Pod SA auth branch was actually taken.
+	podSAAuthLogMarker = "Using pod service account rrsa auth"
+	// providerLogTailLines is the number of trailing log lines to scan per pod.
+	providerLogTailLines = int64(500)
+)
+
+// verifyPodSAInMemoryTokenPath performs explicit assertions to prove the
+// "in-memory Pod SA token" (non-disk) implementation is in effect end-to-end.
+//
+// Three assertions are combined to give strong evidence:
+//  1. Provider container runs with securityContext.readOnlyRootFilesystem=true.
+//     Any accidental write to disk (e.g. a regression back to
+//     SetOIDCTokenFilePath) would fail with EROFS at runtime.
+//  2. Provider container has NO /tmp volumeMount. v0.8.0 removed the /tmp
+//     emptyDir; the in-memory path requires no writable temp dir.
+//  3. At least one running Provider pod's log contains the V=0 marker
+//     "Using pod service account rrsa auth", proving podServiceAccountAuth
+//     successfully built a credential (i.e. the Pod SA branch — not a
+//     fallback — handled the mount).
+//
+// Assertion 1 + 2 come from the DaemonSet spec (chart-level guarantee).
+// Assertion 3 comes from runtime logs (behavior-level guarantee).
+// Together they cover both the static configuration and the dynamic execution.
+//
+// This function should be called AFTER the test pod has successfully mounted
+// its secret, so the marker log has been emitted.
+func verifyPodSAInMemoryTokenPath(ctx context.Context) {
+	By("verifying Provider runs with read-only root filesystem (in-memory token path)")
+	ds, err := TestFramework.Clientset.AppsV1().DaemonSets(framework.ProviderDaemonSetNamespace).Get(
+		ctx, framework.ProviderDaemonSetName, metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred(), "failed to get Provider DaemonSet")
+
+	// Locate the provider container by name
+	var providerContainer *corev1.Container
+	for i := range ds.Spec.Template.Spec.Containers {
+		if ds.Spec.Template.Spec.Containers[i].Name == providerContainerName {
+			providerContainer = &ds.Spec.Template.Spec.Containers[i]
+			break
+		}
+	}
+	Expect(providerContainer).NotTo(BeNil(),
+		fmt.Sprintf("%s container not found in DaemonSet", providerContainerName))
+
+	// Assertion 1: readOnlyRootFilesystem must be explicitly true
+	Expect(providerContainer.SecurityContext).NotTo(BeNil(),
+		"Provider container securityContext must not be nil")
+	Expect(providerContainer.SecurityContext.ReadOnlyRootFilesystem).NotTo(BeNil(),
+		"Provider container securityContext.readOnlyRootFilesystem must be explicitly set")
+	Expect(*providerContainer.SecurityContext.ReadOnlyRootFilesystem).To(BeTrue(),
+		"Provider container must run with readOnlyRootFilesystem=true to enforce the in-memory token path")
+
+	By("verifying Provider container has no /tmp volumeMount")
+	// Assertion 2: no /tmp volumeMount on the provider container
+	for _, vm := range providerContainer.VolumeMounts {
+		Expect(vm.MountPath).NotTo(Equal("/tmp"),
+			"Provider container must NOT mount /tmp; the in-memory token path requires no writable temp dir")
+	}
+
+	By(fmt.Sprintf("verifying Provider log contains %q (Pod SA branch was taken)", podSAAuthLogMarker))
+	// Assertion 3: at least one running Provider pod's log contains the marker
+	pods, err := TestFramework.Clientset.CoreV1().Pods(framework.ProviderDaemonSetNamespace).List(
+		ctx, metav1.ListOptions{LabelSelector: "app=" + framework.ProviderDaemonSetName})
+	Expect(err).NotTo(HaveOccurred(), "failed to list Provider pods")
+	Expect(pods.Items).NotTo(BeEmpty(), "no Provider pods found")
+
+	var (
+		foundMarker   bool
+		markerPodName string
+		scannedPods   int
+		lastStreamErr error
+	)
+	tailLines := providerLogTailLines
+	for _, pod := range pods.Items {
+		if pod.Status.Phase != corev1.PodRunning {
+			continue
+		}
+		scannedPods++
+		logStream, streamErr := TestFramework.Clientset.CoreV1().Pods(framework.ProviderDaemonSetNamespace).
+			GetLogs(pod.Name, &corev1.PodLogOptions{TailLines: &tailLines}).Stream(ctx)
+		if streamErr != nil {
+			lastStreamErr = streamErr
+			log.Printf("WARNING: failed to stream logs from Provider pod %s: %v", pod.Name, streamErr)
+			continue
+		}
+		var buf bytes.Buffer
+		if _, copyErr := io.Copy(&buf, logStream); copyErr != nil {
+			_ = logStream.Close()
+			lastStreamErr = copyErr
+			log.Printf("WARNING: failed to read logs from Provider pod %s: %v", pod.Name, copyErr)
+			continue
+		}
+		_ = logStream.Close()
+		if strings.Contains(buf.String(), podSAAuthLogMarker) {
+			foundMarker = true
+			markerPodName = pod.Name
+			break
+		}
+	}
+	Expect(foundMarker).To(BeTrue(),
+		fmt.Sprintf("no running Provider pod log contains %q (scanned=%d, lastStreamErr=%v); "+
+			"Pod SA auth branch may not have been taken",
+			podSAAuthLogMarker, scannedPods, lastStreamErr))
+	log.Printf("Pod SA in-memory token path verified: marker found in Provider pod %s", markerPodName)
+}
+
+// ============================================================================
 // Authentication Tests (TC-001 ~ TC-007)
 // Each test calls clearAllAuth() before configuring its own auth mode.
 // ============================================================================
@@ -394,6 +513,10 @@ var _ = Describe("Authentication Methods", func() {
 			secretPath := fmt.Sprintf("/mnt/secrets-store/%s", PodSASecretName)
 			err = TestFramework.VerifyMountedFile(ctx, podName, ns, secretPath, "pod-sa-test-value")
 			Expect(err).NotTo(HaveOccurred(), "mounted secret content mismatch")
+
+			// Explicit assertions for the v0.8.0 "in-memory Pod SA token" change.
+			// Placed AFTER the mount succeeds so the V=0 marker log has been emitted.
+			verifyPodSAInMemoryTokenPath(ctx)
 		})
 
 		AfterEach(func() {

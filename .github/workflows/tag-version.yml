@@ -1,0 +1,88 @@
+name: Tag Chart versions
+
+# Trigger on every push to main (no paths filter): a paths filter can silently
+# skip merge commits or re-merges of identical content. Tagging is idempotent
+# (ls-remote SHA comparison, existing tags are skipped), so extra triggers
+# never create or move tags twice.
+on:
+  push:
+    branches:
+      - main
+  # Manual recovery entry point, e.g. to re-run after a transient failure.
+  workflow_dispatch:
+
+# Queue overlapping runs instead of cancelling them, so no push is skipped.
+concurrency:
+  group: tag-chart-versions
+  cancel-in-progress: false
+
+jobs:
+  backfill-tags:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/backfill-tags.yml
+    with:
+      dry_run: false
+
+  current-tag:
+    # Fail fast: a backfill conflict or missing history commit should surface
+    # before the current version is tagged.
+    needs: backfill-tags
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the event commit with full history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Create the tag for the current Chart version if missing
+        env:
+          EVENT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Print the peeled commit SHA of a remote tag (annotated or
+          # lightweight); empty output means the tag does not exist.
+          remote_tag() {
+            local ref="refs/tags/$1" refs
+            if ! refs=$(git ls-remote origin "$ref" "$ref^{}"); then
+              echo "failed to query remote tag: $1" >&2
+              return 1
+            fi
+            awk -v ref="$ref" '
+              $2 == ref { sha = $1 }
+              $2 == ref "^{}" { peeled = $1 }
+              END { if (peeled != "") print peeled; else if (sha != "") print sha }
+            ' <<< "$refs"
+          }
+
+          chart=charts/csi-secrets-store-provider-alibabacloud/Chart.yaml
+          version=$(sed -n 's/^version:[[:space:]]*//p' "$chart" | head -n1 \
+            | sed -e 's/[[:space:]]*#.*$//' -e 's/^["'\'']//' -e 's/[[:space:]]*$//' -e 's/["'\'']$//')
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Chart.version is missing or not a stable X.Y.Z version: '$version'" >&2
+            exit 1
+          fi
+
+          tag="v$version"
+          existing=$(remote_tag "$tag")
+          if [[ -n "$existing" ]]; then
+            echo "skip $tag: already exists, keeping $existing"
+            exit 0
+          fi
+
+          if git push origin "$EVENT_SHA:refs/tags/$tag"; then
+            echo "create $tag $EVENT_SHA"
+          else
+            # Push may fail because a concurrent run created the tag first.
+            existing=$(remote_tag "$tag")
+            if [[ -n "$existing" ]]; then
+              echo "skip $tag: created by a concurrent run, keeping $existing"
+            else
+              echo "failed to create $tag: remote tag still missing" >&2
+              exit 1
+            fi
+          fi

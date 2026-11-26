@@ -50,7 +50,7 @@ spec:
       hostNetwork: true
       containers:
         - name: provider-alibabacloud-installer
-          image: registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud:v0.7.0
+          image: registry-cn-hangzhou.ack.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud:v0.8.0
           imagePullPolicy: IfNotPresent
           args:
             - --provider-volume=/provider
@@ -82,12 +82,12 @@ spec:
               - ALL
           # env: Add environment variables here when needed, e.g.:
           # env:
-          #   - name: ALIBABA_CLOUD_ACCESS_KEY_ID
+          #   - name: ACCESS_KEY_ID
           #     valueFrom:
           #       secretKeyRef:
           #         name: alibaba-credentials
           #         key: access-key-id
-          #   - name: ALIBABA_CLOUD_ACCESS_KEY_SECRET
+          #   - name: SECRET_ACCESS_KEY
           #     valueFrom:
           #       secretKeyRef:
           #         name: alibaba-credentials
@@ -99,8 +99,6 @@ spec:
           volumeMounts:
             - name: provider-vol
               mountPath: /provider
-            - name: tmp
-              mountPath: /tmp
             # RRSA: uncomment to mount projected SA token
             # - name: csi-secrets-store-provider-alibabacloud
             #   mountPath: /var/run/secrets/tokens
@@ -117,10 +115,6 @@ spec:
         - name: provider-vol
           hostPath:
             path: /var/run/secrets-store-csi-providers
-        - name: tmp
-          emptyDir:
-            medium: Memory
-            sizeLimit: 10Mi
         # RRSA: uncomment to enable projected SA token volume
         # - name: csi-secrets-store-provider-alibabacloud
         #   projected:
