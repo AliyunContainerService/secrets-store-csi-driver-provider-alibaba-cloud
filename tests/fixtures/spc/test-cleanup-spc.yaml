@@ -9,7 +9,7 @@ apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
 metadata:
   name: cleanup-test
-  namespace: staging
+  namespace: ${NAMESPACE}
   labels:
     test-case: TC-011
 spec:
@@ -18,8 +18,8 @@ spec:
   - secretName: "${K8S_CLEANUP_SECRET_NAME}"
     type: Opaque
     data:
-    - objectName: "tc011-cleanup-secret-1795518454-27979"
+    - objectName: "${CLEANUP_SECRET_NAME}"
       key: value
   parameters:
     objects: |
-      - objectName: "tc011-cleanup-secret-1795518454-27979"
+      - objectName: "${CLEANUP_SECRET_NAME}"

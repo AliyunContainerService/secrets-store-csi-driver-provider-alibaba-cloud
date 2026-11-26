@@ -8,7 +8,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: jmespath-test
-  namespace: staging
+  namespace: ${NAMESPACE}
   labels:
     test-case: TC-008
 spec:
