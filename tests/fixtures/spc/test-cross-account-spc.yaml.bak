@@ -1,0 +1,27 @@
+# ============================================================================
+# Test Case: TC-006 Cross-account Authentication Test (SecretProviderClass)
+# Objective: Verify cross-account KMS secret access functionality
+# Auth Method: Cross-account AssumeRole (specify target account Role via targetRoleArn)
+# ============================================================================
+
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: cross-account-test
+  namespace: ${NAMESPACE}  # Test namespace
+  labels:
+    test-type: cross-account-authentication
+    test-case: TC-006
+    version: v0.6.0
+spec:
+  provider: alibabacloud
+  parameters:
+    env_auth_mode: aksk
+    objects: |
+      # Access target account's Secret
+      - objectName: "${CROSS_ACCOUNT_SECRET_NAME}"
+        objectType: "kms"
+        # Target account RAM Role ARN for cross-account access
+        crossAccountRoleArn: "${TARGET_ROLE_ARN}"
+        # KMS Endpoint can be specified if target account KMS is in a different region
+        # kmsEndpoint: "kms.cn-hangzhou.aliyuncs.com"

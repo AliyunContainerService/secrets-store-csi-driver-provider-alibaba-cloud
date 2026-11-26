@@ -1,0 +1,53 @@
+# ============================================================================
+# Test Case: TC-001 Pod SA RRSA Authentication Test (Pod)
+# Objective: Verify Pod ServiceAccount RRSA authentication functionality
+# Auth Method: Pod SA RRSA (OIDC token from ServiceAccount)
+# ============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-sa-test
+  namespace: ${NAMESPACE}  # Test namespace
+  labels:
+    test-type: pod-sa-rrsa-authentication
+    test-case: TC-001
+    version: v0.6.0
+spec:
+  # Pod SA RRSA mode: uses ServiceAccount with role ARN annotation
+  serviceAccountName: ${POD_SA_NAME}
+  containers:
+  - name: test-container
+    image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
+    imagePullPolicy: IfNotPresent
+    command:
+    - "/bin/sh"
+    - "-c"
+    - |
+      echo "Starting Pod SA RRSA authentication test..."
+      echo "ServiceAccount: $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)/$(cat /var/run/secrets/kubernetes.io/serviceaccount/token | head -c 20)..."
+      echo "Checking mounted secrets..."
+      ls -la /mnt/secrets-store/
+      echo "Reading secret content..."
+      cat /mnt/secrets-store/${POD_SA_SECRET_NAME}
+      echo ""
+      echo "Test completed successfully!"
+      sleep 3600
+    volumeMounts:
+    - name: secrets-store-inline
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "128Mi"
+        cpu: "200m"
+  volumes:
+  - name: secrets-store-inline
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "pod-sa-auth-test"

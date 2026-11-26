@@ -42,7 +42,7 @@ github.com/alibabacloud-go/openapi-util/service
 # github.com/alibabacloud-go/ram-20150501/v2 v2.2.1
 ## explicit; go 1.14
 github.com/alibabacloud-go/ram-20150501/v2/client
-# github.com/alibabacloud-go/tea v1.3.13
+# github.com/alibabacloud-go/tea v1.5.3
 ## explicit; go 1.14
 github.com/alibabacloud-go/tea/dara
 github.com/alibabacloud-go/tea/tea
@@ -50,15 +50,16 @@ github.com/alibabacloud-go/tea/utils
 # github.com/alibabacloud-go/tea-utils v1.3.9
 ## explicit; go 1.14
 github.com/alibabacloud-go/tea-utils/service
-# github.com/alibabacloud-go/tea-utils/v2 v2.0.7
+# github.com/alibabacloud-go/tea-utils/v2 v2.0.9
 ## explicit; go 1.14
 github.com/alibabacloud-go/tea-utils/v2/service
 # github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
 ## explicit; go 1.13
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors
 github.com/aliyun/alibaba-cloud-sdk-go/sdk/utils
-# github.com/aliyun/credentials-go v1.4.6
+# github.com/aliyun/credentials-go v1.4.14
 ## explicit; go 1.14
+github.com/aliyun/credentials-go
 github.com/aliyun/credentials-go/credentials
 github.com/aliyun/credentials-go/credentials/internal/http
 github.com/aliyun/credentials-go/credentials/internal/utils
@@ -116,6 +117,9 @@ github.com/google/pprof/profile
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
+# github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
+## explicit; go 1.20
+github.com/gorilla/websocket
 # github.com/jmespath/go-jmespath v0.4.0
 ## explicit; go 1.14
 github.com/jmespath/go-jmespath
@@ -192,8 +196,8 @@ go.yaml.in/yaml/v2
 # go.yaml.in/yaml/v3 v3.0.4
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
-# golang.org/x/net v0.56.0
-## explicit; go 1.25.0
+# golang.org/x/net v0.62.0
+## explicit; go 1.26.0
 golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
@@ -212,16 +216,16 @@ golang.org/x/net/trace
 ## explicit; go 1.25.0
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.46.0
-## explicit; go 1.25.0
+# golang.org/x/sys v0.49.0
+## explicit; go 1.26.0
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.44.0
-## explicit; go 1.25.0
+# golang.org/x/term v0.47.0
+## explicit; go 1.26.0
 golang.org/x/term
-# golang.org/x/text v0.39.0
-## explicit; go 1.25.0
+# golang.org/x/text v0.43.0
+## explicit; go 1.26.0
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -245,15 +249,15 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.14.0
 ## explicit; go 1.24.0
 golang.org/x/time/rate
-# golang.org/x/tools v0.47.0
-## explicit; go 1.25.0
+# golang.org/x/tools v0.51.0
+## explicit; go 1.26.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/edge
 golang.org/x/tools/go/ast/inspector
 # google.golang.org/genproto v0.0.0-20220502173005-c8bf987b8c21
 ## explicit; go 1.15
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.82.1
+# google.golang.org/grpc v1.83.2
 ## explicit; go 1.25.0
 google.golang.org/grpc
 google.golang.org/grpc/attributes

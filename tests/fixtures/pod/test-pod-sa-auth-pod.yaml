@@ -8,14 +8,14 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod-sa-test
-  namespace: ${NAMESPACE}  # Test namespace
+  namespace: staging  # Test namespace
   labels:
     test-type: pod-sa-rrsa-authentication
     test-case: TC-001
     version: v0.6.0
 spec:
   # Pod SA RRSA mode: uses ServiceAccount with role ARN annotation
-  serviceAccountName: ${POD_SA_NAME}
+  serviceAccountName: tc001-pod-sa-1795518454-27979
   containers:
   - name: test-container
     image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
@@ -29,7 +29,7 @@ spec:
       echo "Checking mounted secrets..."
       ls -la /mnt/secrets-store/
       echo "Reading secret content..."
-      cat /mnt/secrets-store/${POD_SA_SECRET_NAME}
+      cat /mnt/secrets-store/tc001-pod-sa-secret-1795518454-27979
       echo ""
       echo "Test completed successfully!"
       sleep 3600

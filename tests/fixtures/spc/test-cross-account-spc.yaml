@@ -8,7 +8,7 @@ apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
 metadata:
   name: cross-account-test
-  namespace: ${NAMESPACE}  # Test namespace
+  namespace: staging  # Test namespace
   labels:
     test-type: cross-account-authentication
     test-case: TC-006
@@ -19,9 +19,9 @@ spec:
     env_auth_mode: aksk
     objects: |
       # Access target account's Secret
-      - objectName: "${CROSS_ACCOUNT_SECRET_NAME}"
+      - objectName: "tc006-cross-account-secret-1795518454-27979"
         objectType: "kms"
         # Target account RAM Role ARN for cross-account access
-        crossAccountRoleArn: "${TARGET_ROLE_ARN}"
+        crossAccountRoleArn: "acs:ram::1526183367120663:role/tc006-cross-account-role-1795518454-27979"
         # KMS Endpoint can be specified if target account KMS is in a different region
         # kmsEndpoint: "kms.cn-hangzhou.aliyuncs.com"

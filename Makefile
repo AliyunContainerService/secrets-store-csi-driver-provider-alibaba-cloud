@@ -1,6 +1,6 @@
-DOCKER_REGISTRY ?= "registry.cn-hangzhou.aliyuncs.com/acs"
+DOCKER_REGISTRY ?= "registry-cn-hangzhou.ack.aliyuncs.com/acs"
 BINARY_NAME=secrets-store-csi-driver-provider-alibaba-cloud
-PROVIDER_VERSION=v0.7.0
+PROVIDER_VERSION=v0.8.0
 GO111MODULE=on
 # Image URL to use all building/pushing image targets
 IMG = ${DOCKER_REGISTRY}/${BINARY_NAME}:${PROVIDER_VERSION}

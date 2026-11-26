@@ -83,8 +83,6 @@ spec:
           volumeMounts:
             - name: provider-vol
               mountPath: /provider
-            - name: tmp
-              mountPath: /tmp
             {{- if .Values.rrsa.enable }}
             - mountPath: /var/run/secrets/tokens
               name: csi-secrets-store-provider-alibabacloud
@@ -101,10 +99,6 @@ spec:
         - name: provider-vol
           hostPath:
             path: {{ .Values.linux.providersDir }}
-        - name: tmp
-          emptyDir:
-            medium: Memory
-            sizeLimit: 10Mi
         {{- if .Values.rrsa.enable }}
         - name: csi-secrets-store-provider-alibabacloud
           projected:

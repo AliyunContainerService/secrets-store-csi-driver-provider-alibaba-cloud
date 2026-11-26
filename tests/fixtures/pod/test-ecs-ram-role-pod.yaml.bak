@@ -1,0 +1,29 @@
+# ============================================================================
+# Test Case: TC-007 ECS RAM Role Authentication Test (Pod)
+# Objective: Verify ECS instance RAM Role access to KMS secrets
+# Auth Method: ECS RAM Role (fallback authentication)
+# ============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ecs-ram-role-test
+  namespace: ${NAMESPACE}
+  labels:
+    test-case: TC-007
+spec:
+  containers:
+  - name: test
+    image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: secrets
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+  volumes:
+  - name: secrets
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "ecs-ram-role-test"

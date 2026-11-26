@@ -9,7 +9,7 @@ apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
 metadata:
   name: backward-compat-test
-  namespace: ${NAMESPACE}  # Test namespace
+  namespace: staging  # Test namespace
   labels:
     test-type: backward-compatibility
     test-case: TC-002
@@ -20,7 +20,7 @@ spec:
     # Note: This configuration uses the legacy RRSA mode
     # Does not specify usePodServiceAccountToken, uses Provider-level authentication
     objects: |
-      - objectName: "${RRSA_SECRET_NAME}"
+      - objectName: "tc002-rrsa-secret-1795518454-27979"
         objectType: "kms"
         # KMS Endpoint can be specified as needed
         # kmsEndpoint: "kms.cn-hangzhou.aliyuncs.com"

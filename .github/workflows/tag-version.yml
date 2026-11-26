@@ -1,0 +1,88 @@
+name: Tag Chart versions
+
+on:
+  push:
+    branches:
+      - main
+    # 不设 paths：任何合并/推送到 main 都触发，避免合并提交或重复合并相同内容时
+    # paths 不命中而漏跑。打 tag 逻辑幂等（ls-remote 按 SHA 比对，已存在即跳过），
+    # 因此重复触发不会重复创建或移动 tag。
+
+jobs:
+  backfill-tags:
+    permissions:
+      contents: write
+      # 可复用 workflow 继承调用方权限：历史提交若改动过 workflow 文件，推 tag 需要 workflows 权限。
+      workflows: write
+    uses: ./.github/workflows/backfill-tags.yml
+    with:
+      dry_run: false
+
+  current-tag:
+    needs: backfill-tags
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # 触发提交本身可能改动 workflow 文件，推 tag 需要 workflows 权限。
+      workflows: write
+    steps:
+      - name: 检出事件提交及完整历史
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: 为当前 Chart 版本创建缺失标签
+        env:
+          EVENT_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          remote_tag() {
+            local ref="refs/tags/$1" refs
+            if ! refs=$(git ls-remote origin "$ref" "$ref^{}"); then
+              echo "查询远程标签失败：$1" >&2
+              return 1
+            fi
+            awk -v ref="$ref" '
+              $2 == ref { sha = $1 }
+              $2 == ref "^{}" { peeled = $1 }
+              END { if (peeled != "") print peeled; else if (sha != "") print sha }
+            ' <<< "$refs"
+          }
+
+          version=$(awk '
+            /^version:[[:space:]]*/ {
+              sub(/^version:[[:space:]]*/, "")
+              sub(/[[:space:]]+#.*$/, "")
+              sub(/[[:space:]]+$/, "")
+              print
+            }
+          ' charts/csi-secrets-store-provider-alibabacloud/Chart.yaml)
+          if [[ "$version" == \"*\" || "$version" == \'*\' ]]; then
+            version=${version:1:-1}
+          fi
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Chart.version 缺失或不是稳定版本 X.Y.Z：$version" >&2
+            exit 1
+          fi
+
+          tag="v$version"
+          existing=$(remote_tag "$tag")
+          if [[ -n "$existing" ]]; then
+            echo "skip $tag：远程标签已存在，保持原指向 $existing"
+            exit 0
+          fi
+
+          if git push origin "$EVENT_SHA:refs/tags/$tag"; then
+            echo "create $tag $EVENT_SHA"
+          else
+            existing=$(remote_tag "$tag")
+            if [[ -n "$existing" ]]; then
+              echo "skip $tag：并发任务已创建，保持原指向 $existing"
+            else
+              echo "创建 $tag 失败，远程标签仍不存在" >&2
+              exit 1
+            fi
+          fi

@@ -1,0 +1,106 @@
+name: Backfill historical Chart tags
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        description: '仅预检，不写入标签；自动调用时传入 false'
+        type: boolean
+        default: true
+        required: false
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '仅预检并输出 create/skip/conflict，不写入标签'
+        type: boolean
+        default: true
+        required: true
+
+jobs:
+  backfill-tags:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # 历史提交（如 v0.5.0 的 1ef1e4f）改动了 .github/workflows/test.yml，
+      # GITHUB_TOKEN 推送指向此类提交的 tag 必须携带 workflows 权限，否则 remote rejected。
+      workflows: write
+    steps:
+      - name: 检出 main 及完整历史
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      - name: 全量预检固定历史映射后按需补标签
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          remote_tag() {
+            local ref="refs/tags/$1" refs
+            if ! refs=$(git ls-remote origin "$ref" "$ref^{}"); then
+              echo "查询远程标签失败：$1" >&2
+              return 1
+            fi
+            awk -v ref="$ref" '
+              $2 == ref { sha = $1 }
+              $2 == ref "^{}" { peeled = $1 }
+              END { if (peeled != "") print peeled; else if (sha != "") print sha }
+            ' <<< "$refs"
+          }
+
+          tags=(v0.1.0 v0.2.0 v0.3.0 v0.4.0 v0.5.0 v0.6.0 v0.7.0)
+          shas=(
+            f5573ce7b8c47bfd28541e255ca20d4c8f15f758
+            1f28a29ce0a286e89bf547a595bb36e25e02507c
+            1079c02e41c8a53d58d446258ab6270ae0a99bc9
+            7b962ef1f9bd2d5b996152fa340873142ed40227
+            1ef1e4f1d4766c923bd9cf3df9392c85c6df9692
+            55b6729492e4f03b541b42442edd845293c7d3c0
+            40d7efd6971b9500f1c54f7b48fe7794724bde2e
+          )
+          pending=()
+
+          # 全部预检通过之前不创建任何标签。
+          for i in "${!tags[@]}"; do
+            tag=${tags[$i]}
+            sha=${shas[$i]}
+            if ! git cat-file -e "$sha^{commit}" ||
+               ! git merge-base --is-ancestor "$sha" refs/remotes/origin/main; then
+              echo "固定历史提交不存在或不属于 main：$tag $sha" >&2
+              exit 1
+            fi
+            existing=$(remote_tag "$tag")
+            if [[ -z "$existing" ]]; then
+              echo "create $tag $sha"
+              pending+=("$i")
+            elif [[ "$existing" == "$sha" ]]; then
+              echo "skip $tag $sha"
+            else
+              echo "conflict $tag：预期 $sha，远程指向 $existing；拒绝覆盖" >&2
+              exit 1
+            fi
+          done
+
+          if [[ "$DRY_RUN" == true ]]; then
+            echo "dry-run：预检完成，未写入任何标签"
+            exit 0
+          fi
+
+          for i in "${pending[@]}"; do
+            tag=${tags[$i]}
+            sha=${shas[$i]}
+            if git push origin "$sha:refs/tags/$tag"; then
+              echo "create $tag $sha"
+            else
+              existing=$(remote_tag "$tag")
+              if [[ "$existing" == "$sha" ]]; then
+                echo "skip $tag $sha：并发任务已创建相同标签"
+              else
+                echo "创建 $tag 失败，远程未指向预期提交 $sha；拒绝覆盖" >&2
+                exit 1
+              fi
+            fi
+          done
