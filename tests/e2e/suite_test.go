@@ -221,7 +221,10 @@ func execAliyunWithRetry(maxRetries int, args ...string) ([]byte, error) {
 
 // isRRSAEnabled queries the cluster and returns whether RRSA is enabled.
 func isRRSAEnabled(clusterID string) (bool, error) {
-	output, err := execAliyunWithRetry(3, "cs", "GET", "/clusters/"+clusterID, "--region", TestCfg.RegionID, "--header", "Content-Type=application/json")
+	args := []string{"cs", "GET", "/clusters/" + clusterID, "--region", TestCfg.RegionID}
+	args = append(args, csEndpointArgs(TestCfg.CSEndpoint)...)
+	args = append(args, "--header", "Content-Type=application/json")
+	output, err := execAliyunWithRetry(3, args...)
 	if err != nil {
 		return false, fmt.Errorf("failed to check cluster RRSA status: %v", err)
 	}
@@ -230,11 +233,27 @@ func isRRSAEnabled(clusterID string) (bool, error) {
 		RRSAConfig struct {
 			Enabled bool `json:"enabled"`
 		} `json:"rrsa_config"`
+		MetaData string `json:"meta_data"`
 	}
 	if err := json.Unmarshal(output, &clusterInfo); err != nil {
 		return false, fmt.Errorf("failed to parse cluster info: %v, output: %s", err, string(output))
 	}
-	return clusterInfo.RRSAConfig.Enabled, nil
+	if clusterInfo.RRSAConfig.Enabled {
+		return true, nil
+	}
+	// Some (pre-release) CS APIs omit the top-level rrsa_config field and only
+	// expose RRSA state inside the meta_data JSON string. Fall back to it.
+	if clusterInfo.MetaData != "" {
+		var meta struct {
+			RRSAConfig struct {
+				Enabled bool `json:"enabled"`
+			} `json:"RRSAConfig"`
+		}
+		if err := json.Unmarshal([]byte(clusterInfo.MetaData), &meta); err == nil && meta.RRSAConfig.Enabled {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // ensureRRSAEnabled checks if RRSA is enabled on the cluster and enables it if not.
@@ -257,7 +276,10 @@ func ensureRRSAEnabled() error {
 
 	// Enable RRSA (idempotent: repeated calls have no side effects)
 	fmt.Println("Enabling RRSA on cluster...")
-	if _, err := execAliyunWithRetry(3, "cs", "PUT", "/api/v2/clusters/"+clusterID, "--region", TestCfg.RegionID, "--header", "Content-Type=application/json", "--body", "{\"enable_rrsa\":true}"); err != nil {
+	putArgs := []string{"cs", "PUT", "/api/v2/clusters/" + clusterID, "--region", TestCfg.RegionID}
+	putArgs = append(putArgs, csEndpointArgs(TestCfg.CSEndpoint)...)
+	putArgs = append(putArgs, "--header", "Content-Type=application/json", "--body", "{\"enable_rrsa\":true}")
+	if _, err := execAliyunWithRetry(3, putArgs...); err != nil {
 		return fmt.Errorf("failed to enable RRSA: %v", err)
 	}
 

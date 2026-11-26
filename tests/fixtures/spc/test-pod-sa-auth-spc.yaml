@@ -11,7 +11,7 @@ apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
 metadata:
   name: pod-sa-auth-test
-  namespace: ${NAMESPACE}  # Test namespace
+  namespace: staging  # Test namespace
   labels:
     test-type: pod-sa-rrsa-authentication
     test-case: TC-001
@@ -23,5 +23,5 @@ spec:
     usePodServiceAccountToken: "true"
     # Configure secrets to access
     objects: |
-      - objectName: "${POD_SA_SECRET_NAME}"
+      - objectName: "tc001-pod-sa-secret-1795518454-27979"
         objectType: "kms"

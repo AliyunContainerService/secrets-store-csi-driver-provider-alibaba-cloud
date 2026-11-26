@@ -74,7 +74,7 @@ func (ch *chainedAuth) NewCredential() (credentials.Credential, error) {
 type oidcRoleAuth struct{ *authConfig }
 
 func (c *oidcRoleAuth) NewCredential() (credentials.Credential, error) {
-	//prefer to use rrsa oidc auth type
+	// Provider-level RRSA OIDC auth (position 2 in the auth chain)
 	if c.oidcArn == "" || c.roleArn == "" {
 		return nil, nil
 	}
@@ -92,7 +92,7 @@ func (c *oidcRoleAuth) NewCredential() (credentials.Credential, error) {
 
 	cred, err := credentials.NewCredential(config)
 	if err != nil {
-		klog.Warning("OIDC auth failed, deferring to next auth method",
+		klog.Warning("OIDC auth failed, aborting auth chain (no fallback to other methods)",
 			"roleArn", c.roleArn, "oidcArn", c.oidcArn, "err", err)
 		return nil, err
 	}
@@ -126,9 +126,11 @@ func (c *podServiceAccountAuth) NewCredential() (credentials.Credential, error) 
 	}
 
 	if tokensJSON == "" {
-		klog.Warning("Pod SA token not found, skipping Pod SA authentication",
-			"namespace", c.podNamespace, "serviceAccount", c.podServiceAccount)
-		return nil, nil
+		klog.Errorf("Pod SA token not found, aborting Pod SA authentication (namespace=%s, serviceAccount=%s)",
+			c.podNamespace, c.podServiceAccount)
+		return nil, fmt.Errorf(
+			"pod SA token not found in CSI request (neither in secrets nor volume context) (namespace=%s, serviceAccount=%s); Pod SA authentication fails, aborting auth chain (no fallback to other methods). Ensure CSI driver has tokenRequests enabled and the SecretProviderClass has correct audience configuration",
+			c.podNamespace, c.podServiceAccount)
 	}
 
 	var tokens map[string]struct {
@@ -143,27 +145,14 @@ func (c *podServiceAccountAuth) NewCredential() (credentials.Credential, error) 
 	tokenData, exists := tokens["sts.aliyuncs.com"]
 	if !exists || tokenData.Token == "" {
 		return nil, fmt.Errorf(
-			"pod SA token not found for audience 'sts.aliyuncs.com' (namespace=%s, serviceAccount=%s); skipping Pod SA authentication, falling back to next auth method", c.podNamespace, c.podServiceAccount)
+			"pod SA token not found for audience 'sts.aliyuncs.com' (namespace=%s, serviceAccount=%s); Pod SA authentication fails, aborting auth chain (no fallback to other methods)", c.podNamespace, c.podServiceAccount)
 	}
 
-	// Write token to temporary file for credentials SDK.
-	// The SDK requires a file path, not the token string directly.
-	tmpFile, err := os.CreateTemp("", "pod-sa-token-*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temporary token file: %v", err)
-	}
-	tmpFilePath := tmpFile.Name()
-	klog.V(4).Info("Created temporary token file for Pod SA auth", "path", tmpFilePath)
-
-	if _, err := tmpFile.WriteString(tokenData.Token); err != nil {
-		_ = tmpFile.Close()
-		_ = os.Remove(tmpFilePath) // Clean up on error
-		return nil, fmt.Errorf("failed to write token to temporary file: %v", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		_ = os.Remove(tmpFilePath)
-		return nil, fmt.Errorf("failed to close temporary token file: %v", err)
-	}
+	// Pass the in-memory token from the Mount RPC straight to the credentials SDK
+	// (credentials-go >= v1.4.14 supports Config.OIDCToken). The token is never
+	// written to disk, so no temp-file lifetime/cleanup concerns apply.
+	klog.V(4).InfoS("Using in-memory Pod SA token for Pod SA auth",
+		"namespace", c.podNamespace, "serviceAccount", c.podServiceAccount)
 
 	sessionName := roleSessionName
 	if c.roleSessionName != "" {
@@ -172,28 +161,24 @@ func (c *podServiceAccountAuth) NewCredential() (credentials.Credential, error) 
 	config := new(credentials.Config).
 		SetType(OidcAuthType).
 		SetOIDCProviderArn(c.oidcArn).
-		SetOIDCTokenFilePath(tmpFilePath).
+		SetOIDCToken(tokenData.Token).
 		SetRoleArn(c.podServiceAccountRoleArn).
 		SetRoleSessionName(sessionName)
 
 	cred, err := credentials.NewCredential(config)
 	if err != nil {
-		klog.ErrorS(err, "Pod SA auth failed",
+		klog.ErrorS(err, "Pod SA auth failed, aborting auth chain (no fallback to other methods)",
 			"namespace", c.podNamespace,
 			"serviceAccount", c.podServiceAccount,
 			"roleArn", c.podServiceAccountRoleArn)
 		return nil, err
 	}
 	if cred != nil {
-		klog.Info("Using pod service account rrsa auth..",
+		klog.InfoS("Using pod service account rrsa auth",
 			"namespace", c.podNamespace,
 			"serviceAccount", c.podServiceAccount,
 			"roleArn", c.podServiceAccountRoleArn)
 	}
-	// Note: The temporary token file is intentionally not deleted here.
-	// The credentials SDK may read the file asynchronously after NewCredential() returns.
-	// The file will be cleaned up by the OS temporary file cleaner (e.g., systemd-tmpfiles).
-	// File path: tmpFilePath (logged at V(4) for debugging)
 	return cred, err
 }
 

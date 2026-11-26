@@ -9,7 +9,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: cleanup-test
-  namespace: ${NAMESPACE}
+  namespace: staging
   labels:
     test-case: TC-011
 spec:

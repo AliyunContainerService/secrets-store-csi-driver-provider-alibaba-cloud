@@ -1,0 +1,23 @@
+# ============================================================================
+# Test Case: TC-008 JMESPath JSON Parsing Test (SecretProviderClass)
+# Objective: Verify JMESPath extracts specific fields from JSON-formatted KMS Secret
+# Auth Method: Inherits current Provider authentication configuration
+# ============================================================================
+
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: jmespath-test
+  namespace: ${NAMESPACE}
+  labels:
+    test-case: TC-008
+spec:
+  provider: alibabacloud
+  parameters:
+    objects: |
+      - objectName: "${JMESPATH_SECRET_NAME}"
+        jmesPath:
+          - path: "username"
+            objectAlias: "myUsername"
+          - path: "password"
+            objectAlias: "myPassword"

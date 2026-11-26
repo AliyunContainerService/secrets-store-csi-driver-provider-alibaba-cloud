@@ -1,0 +1,26 @@
+# ============================================================================
+# Test Case: TC-002 Backward Compatibility Test - Provider RRSA Mode (SecretProviderClass)
+# Objective: Verify legacy Provider-level RRSA authentication still works in v0.6.0
+# Auth Method: Provider RRSA (without specifying usePodServiceAccountToken)
+# ============================================================================
+
+
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: backward-compat-test
+  namespace: ${NAMESPACE}  # Test namespace
+  labels:
+    test-type: backward-compatibility
+    test-case: TC-002
+    version: v0.6.0
+spec:
+  provider: alibabacloud
+  parameters:
+    # Note: This configuration uses the legacy RRSA mode
+    # Does not specify usePodServiceAccountToken, uses Provider-level authentication
+    objects: |
+      - objectName: "${RRSA_SECRET_NAME}"
+        objectType: "kms"
+        # KMS Endpoint can be specified as needed
+        # kmsEndpoint: "kms.cn-hangzhou.aliyuncs.com"

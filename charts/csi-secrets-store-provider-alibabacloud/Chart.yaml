@@ -1,7 +1,7 @@
 apiVersion: v1
 name: csi-secrets-store-provider-alibabacloud
-version: 0.7.0
-appVersion: 0.7.0
+version: 0.8.0
+appVersion: 0.8.0
 kubeVersion: ">=1.30.0-0"
 description: A Helm chart for deploying the Secrets Store CSI Driver Provider for Alibaba Cloud, supporting multiple authentication methods including AK/SK, RAM Role, RRSA/OIDC, ECS RAM Role, and Node Publish Secret.
 sources:

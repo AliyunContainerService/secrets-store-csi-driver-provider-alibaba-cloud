@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================================
 # Test Script - 11 Test Cases
 # ============================================================================
@@ -22,6 +22,32 @@
 # ============================================================================
 
 set -euo pipefail
+
+# ----------------------------------------------------------------------------
+# Bash < 4.4 empty-array expansion workaround
+# ----------------------------------------------------------------------------
+# Bug: On bash < 4.4, expanding an empty array as "${arr[@]}" under `set -u`
+# triggers "unbound variable" and aborts the script. This affects numerous
+# sites in this script (e.g. "${extra_args[@]}" when no cross-account creds
+# are passed, "${BACKED_UP_FILES[@]}" when no YAML has been backed up yet).
+# Fixed upstream in bash 4.4 (2016).
+#
+# macOS ships bash 3.2.57 as /bin/bash due to GPLv3 licensing, so this bug
+# affects most Mac developers out of the box.
+#
+# Workaround: on affected versions, relax `set -u` for the rest of the script
+# and print a warning. Scalar variables still use "${VAR:-default}" guards,
+# so the loss of `-u` has minimal impact on correctness.
+#
+# Permanent fix: install a modern bash (e.g. `brew install bash`) and re-run;
+# the shebang `#!/usr/bin/env bash` will pick it up from PATH automatically.
+# ----------------------------------------------------------------------------
+if [ "${BASH_VERSINFO[0]}" -lt 4 ] || \
+   { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -lt 4 ]; }; then
+    set +u
+    printf '[WARN] Bash %s detected (< 4.4): disabled `set -u` to work around the empty-array expansion bug.\n' "$BASH_VERSION" >&2
+    printf '[WARN] For full strict-mode safety, install bash >= 4.4 (e.g. `brew install bash`) and re-run.\n' >&2
+fi
 
 # ============================================================================
 # Global Variables and Configuration (~50 lines)
@@ -93,6 +119,17 @@ HELM_CHART_PATH="${HELM_CHART_PATH:-${PROJECT_ROOT}/charts/csi-secrets-store-pro
 
 # KMS service region
 KMS_REGION="${KMS_REGION:-cn-hangzhou}"
+
+# CS (Container Service) API endpoint override.
+# Empty (default) => aliyun CLI uses its built-in production endpoint
+#   (cs.<region>.aliyuncs.com). Set this to a pre-release/staging host when the
+#   target cluster only exists in a non-production environment, e.g.:
+#   CS_ENDPOINT=cs-pre.aliyuncs.com   (requires a matching /etc/hosts entry)
+CS_ENDPOINT="${CS_ENDPOINT:-}"
+cs_endpoint_args=()
+if [ -n "${CS_ENDPOINT}" ]; then
+    cs_endpoint_args=(--endpoint "${CS_ENDPOINT}")
+fi
 
 # KMS encryption configuration (for DKMS/managed KMS scenarios)
 ENCRYPTION_KEY_ID="${ENCRYPTION_KEY_ID:-}"
@@ -487,7 +524,7 @@ ensure_rrsa_enabled() {
     local cluster_detail
     local rrsa_query_max_retries=5 rrsa_query_delay=5
     for ((rrsa_qry=1; rrsa_qry<=rrsa_query_max_retries; rrsa_qry++)); do
-        if cluster_detail=$(aliyun cs GET "/clusters/${cluster_id}" --region "${KMS_REGION}" --header "Content-Type=application/json" 2>&1); then
+        if cluster_detail=$(aliyun cs GET "/clusters/${cluster_id}" --region "${KMS_REGION}" "${cs_endpoint_args[@]}" --header "Content-Type=application/json" 2>&1); then
             break
         fi
         if [[ $rrsa_qry -lt $rrsa_query_max_retries ]]; then
@@ -495,13 +532,19 @@ ensure_rrsa_enabled() {
             sleep "$rrsa_query_delay"
         else
             log_warning "Failed to describe cluster after $rrsa_query_max_retries attempts, RRSA status unknown"
+            log_warning "aliyun cs response: ${cluster_detail}"
             return 1
         fi
     done
 
-    # Parse rrsa_config.enabled from JSON response
+    # Parse RRSA status from the JSON response.
+    # Use printf (not echo): the response's meta_data field carries backslash
+    # escapes that `echo` would mangle and break jq parsing.
+    # RRSA state is at top-level .rrsa_config.enabled on the production API but
+    # only inside .meta_data.RRSAConfig.enabled on some (pre-release) APIs, so
+    # check both.
     local rrsa_enabled
-    rrsa_enabled=$(echo "${cluster_detail}" | jq -r '.rrsa_config.enabled // false' 2>/dev/null || echo "false")
+    rrsa_enabled=$(printf '%s' "${cluster_detail}" | jq -r '(.rrsa_config.enabled // (.meta_data | fromjson? | .RRSAConfig.enabled) // false)' 2>/dev/null || echo "false")
 
     if [[ "${rrsa_enabled}" == "true" ]]; then
         log_success "RRSA is already enabled on the cluster"
@@ -513,7 +556,7 @@ ensure_rrsa_enabled() {
     local enable_retry=0 enable_max=5 enable_delay=5
     local enable_output
     while [ $enable_retry -lt $enable_max ]; do
-        if enable_output=$(aliyun cs PUT "/api/v2/clusters/${cluster_id}" --region "${KMS_REGION}" --header "Content-Type=application/json" --body '{"enable_rrsa":true}' 2>&1); then
+        if enable_output=$(aliyun cs PUT "/api/v2/clusters/${cluster_id}" --region "${KMS_REGION}" "${cs_endpoint_args[@]}" --header "Content-Type=application/json" --body '{"enable_rrsa":true}' 2>&1); then
             log_success "RRSA enabled"
             break
         fi
@@ -535,7 +578,7 @@ ensure_rrsa_enabled() {
     while [[ $retry -lt $max_retries ]]; do
         sleep 30
         local status
-        status=$(aliyun cs GET "/clusters/${cluster_id}" --region "${KMS_REGION}" --header "Content-Type=application/json" 2>/dev/null | jq -r '.rrsa_config.enabled // false' || echo "false")
+        status=$(aliyun cs GET "/clusters/${cluster_id}" --region "${KMS_REGION}" "${cs_endpoint_args[@]}" --header "Content-Type=application/json" 2>/dev/null | jq -r '(.rrsa_config.enabled // (.meta_data | fromjson? | .RRSAConfig.enabled) // false)' || echo "false")
         if [[ "$status" == "true" ]]; then
             log_success "RRSA is now enabled on the cluster"
             return 0
@@ -1522,9 +1565,12 @@ prepare_test_yaml() {
 
     cp "$spc_template" "$tmp_spc"
     cp "$pod_template" "$tmp_pod"
-    # Replace Secret name placeholders
+    # Replace Secret name placeholders (BSD/GNU sed compatible)
+    # macOS BSD sed requires `-i ''` syntax while GNU sed uses `-i`.
+    # Use temp file approach for maximum portability across both variants.
     while [ $# -ge 2 ]; do
-        sed -i "s/\${$1}/$2/g" "$tmp_spc" "$tmp_pod"
+        sed "s/\${$1}/$2/g" "$tmp_spc" > "${tmp_spc}.sed" && mv "${tmp_spc}.sed" "$tmp_spc"
+        sed "s/\${$1}/$2/g" "$tmp_pod" > "${tmp_pod}.sed" && mv "${tmp_pod}.sed" "$tmp_pod"
         shift 2
     done
     # envsubst replaces ${NAMESPACE} and other environment variables
@@ -1631,6 +1677,43 @@ patch_daemonset_for_auth() {
         --argjson new_env "$final_env" \
         --arg restart_time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         '.spec.template.spec.containers[$idx].env = $new_env | .spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"] = $restart_time')
+
+    # 6b. Manage projected serviceAccountToken volume for RRSA auth.
+    #     Chart default rrsa.enable=false means no projected volume is mounted.
+    #     Provider RRSA (oidcRoleAuth) reads the token file at
+    #     /var/run/secrets/tokens/csi-secrets-store-provider-alibabacloud.
+    #     When auth_mode is "rrsa", add the volume + volumeMount;
+    #     otherwise remove them (cleanup from a previous rrsa configuration).
+    local rrsa_vol_name="csi-secrets-store-provider-alibabacloud"
+    if [[ "$auth_mode" == "rrsa" ]]; then
+        updated_ds=$(echo "$updated_ds" | jq -c \
+            --argjson idx "$container_idx" \
+            --arg vol "$rrsa_vol_name" \
+            '
+            .spec.template.spec.containers[$idx].volumeMounts =
+                ((.spec.template.spec.containers[$idx].volumeMounts // [])
+                 | map(select(.name != $vol))
+                 + [{"mountPath":"/var/run/secrets/tokens","name":$vol}])
+            |
+            .spec.template.spec.volumes =
+                ((.spec.template.spec.volumes // [])
+                 | map(select(.name != $vol))
+                 + [{"name":$vol,"projected":{"sources":[{"serviceAccountToken":{"path":$vol,"expirationSeconds":7200,"audience":"sts.aliyuncs.com"}}]}}])
+            ')
+    else
+        updated_ds=$(echo "$updated_ds" | jq -c \
+            --argjson idx "$container_idx" \
+            --arg vol "$rrsa_vol_name" \
+            '
+            .spec.template.spec.containers[$idx].volumeMounts =
+                ((.spec.template.spec.containers[$idx].volumeMounts // [])
+                 | map(select(.name != $vol)))
+            |
+            .spec.template.spec.volumes =
+                ((.spec.template.spec.volumes // [])
+                 | map(select(.name != $vol)))
+            ')
+    fi
 
     # 7. UPDATE via kubectl replace (PUT semantics — fully replaces the resource)
     echo "$updated_ds" | kubectl replace -f - 2>&1 || {
@@ -1951,7 +2034,33 @@ run_tc001_pod_sa_rrsa() {
         _tc001_cleanup
         return 1
     fi
-    
+
+    # Explicit assertions for the v0.8.0 "in-memory Pod SA token" (non-disk) path.
+    # The chart removed the /tmp emptyDir and hardcodes readOnlyRootFilesystem=true;
+    # auth.go uses SetOIDCToken (in-memory) instead of SetOIDCTokenFilePath (disk).
+    # A regression to disk-write is only caught at runtime IF readOnlyRootFilesystem
+    # stays true. Assert the static guarantees here so a chart regression (re-adding
+    # /tmp or dropping readOnlyRootFilesystem) is caught even when the functional
+    # mount still succeeds. Mirrors tests/e2e/auth_test.go verifyPodSAInMemoryTokenPath.
+    log_info "TC-001: Verifying in-memory Pod SA token path (readOnlyRootFilesystem + no /tmp mount)..."
+    local tc001_ds_json tc001_ro_root tc001_tmp_mounts
+    tc001_ds_json=$(kubectl get daemonset csi-secrets-store-provider-alibabacloud -n kube-system -o json 2>/dev/null)
+    tc001_ro_root=$(echo "$tc001_ds_json" | jq -r '.spec.template.spec.containers[] | select(.name=="provider-alibabacloud-installer") | .securityContext.readOnlyRootFilesystem' 2>/dev/null)
+    tc001_tmp_mounts=$(echo "$tc001_ds_json" | jq -r '.spec.template.spec.containers[] | select(.name=="provider-alibabacloud-installer") | [.volumeMounts[]?.mountPath] | map(select(.=="/tmp")) | length' 2>/dev/null)
+    if [[ "$tc001_ro_root" != "true" ]]; then
+        log_error "TC-001: Provider readOnlyRootFilesystem=$tc001_ro_root (expected true); in-memory token path not enforced"
+        record_result "$test_name" "FAIL" "readOnlyRootFilesystem!=true"
+        _tc001_cleanup
+        return 1
+    fi
+    if [[ "$tc001_tmp_mounts" != "0" ]]; then
+        log_error "TC-001: Provider still mounts /tmp ($tc001_tmp_mounts mount(s)); /tmp emptyDir was removed in v0.8.0"
+        record_result "$test_name" "FAIL" "Provider still mounts /tmp"
+        _tc001_cleanup
+        return 1
+    fi
+    log_success "TC-001: In-memory Pod SA token path verified (readOnlyRootFilesystem=true, no /tmp mount)"
+
     record_result "$test_name" "PASS" "Pod SA RRSA authentication successful"
     _tc001_cleanup
     log_step "$test_name complete"
@@ -3091,7 +3200,7 @@ run_tc007_ecs_ram_role() {
     local cluster_detail
     local tc007_query_max_retries=3 tc007_query_delay=5
     for ((tc007_qry=1; tc007_qry<=tc007_query_max_retries; tc007_qry++)); do
-        if cluster_detail=$(aliyun cs DescribeClusterDetail --ClusterId "${CLUSTER_ID}" 2>/dev/null); then
+        if cluster_detail=$(aliyun cs DescribeClusterDetail --ClusterId "${CLUSTER_ID}" "${cs_endpoint_args[@]}" 2>/dev/null); then
             break
         fi
         if [[ $tc007_qry -lt $tc007_query_max_retries ]]; then
@@ -3104,7 +3213,7 @@ run_tc007_ecs_ram_role() {
         fi
     done
 
-    worker_role_name=$(echo "$cluster_detail" | jq -r '.worker_ram_role_name // empty')
+    worker_role_name=$(printf '%s' "$cluster_detail" | jq -r '.worker_ram_role_name // empty')
     if [[ -z "$worker_role_name" ]]; then
         log_error "TC-007: WorkerRole not found in cluster details (field: worker_ram_role_name)"
         record_result "$test_name" "FAIL" "WorkerRole not found"

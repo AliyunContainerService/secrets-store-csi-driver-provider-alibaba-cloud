@@ -1,0 +1,29 @@
+# ============================================================================
+# Test Case: TC-003 RAM Role Authentication Test (Pod)
+# Objective: Verify AK/SK + RoleArn AssumeRole access to KMS secrets
+# Auth Method: RAM Role (AK/SK + RoleArn)
+# ============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ram-role-test
+  namespace: ${NAMESPACE}
+  labels:
+    test-case: TC-003
+spec:
+  containers:
+  - name: test
+    image: anolis-registry.cn-zhangjiakou.cr.aliyuncs.com/openanolis/nginx:1.14.1-8.6
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: secrets
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+  volumes:
+  - name: secrets
+    csi:
+      driver: secrets-store.csi.k8s.io
+      readOnly: true
+      volumeAttributes:
+        secretProviderClass: "ram-role-test"

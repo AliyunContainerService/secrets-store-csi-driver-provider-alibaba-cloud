@@ -26,6 +26,7 @@ Alibaba Cloud Secrets Manager provider for Secrets Store CSI driver allows you t
 - [Troubleshooting](#troubleshooting)
 - [SecretProviderClass Options](#secretproviderclass-options)
 - [Additional Considerations](#additional-considerations)
+- [Upgrade Notes](#upgrade-notes)
 - [Security](#security)
 - [License](#license)
 
@@ -64,14 +65,14 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 | `envVarsFromSecret.ALICLOUD_ROLE_SESSION_NAME`                 | Set the ALICLOUD_ROLE_SESSION_NAME variable to specify the RAM role session name for building SDK client, which needs to be defined in the secret named**alibaba-credentials**                 |                                                                                                   |
 | `envVarsFromSecret.ALICLOUD_ROLE_SESSION_EXPIRATION`           | Set the ALICLOUD_ROLE_SESSION_EXPIRATION variable to specify the RAM role session expiration for building SDK client, which needs to be defined in the secret named**alibaba-credentials**           |                                                                                                   |
 | `envVarsFromSecret.ALICLOUD_OIDC_PROVIDER_ARN`                 | Set the ALICLOUD_OIDC_PROVIDER_ARN variable to specify the RAM OIDC provider arn for building SDK client. The Secret data key must be `oidcproviderarn`, defined in the secret named**alibaba-credentials**                |                                                                                                   |
-| `envVarsFromSecret.ALICLOUD_OIDC_TOKEN_FILE`                   | Set the ALICLOUD_OIDC_TOKEN_FILE variable to specify the serviceaccount OIDC token file path for building SDK client, which needs to be defined in the secret named**alibaba-credentials**     |                                                                                                   |
+| `envVarsFromSecret.ALICLOUD_OIDC_TOKEN_FILE`                   | Deprecated/no-op: the OIDC token file path is fixed to the DaemonSet projected token mount (/var/run/secrets/tokens/csi-secrets-store-provider-alibabacloud) and this variable is not read.     |                                                                                                   |
 | `rrsa.enable`                                                  | Enable RRSA feature (alpha), default is false. When enabled, configure OIDC Provider ARN via `rrsa.accountId`/`rrsa.clusterId` (auto-construct) or explicitly via `envVarsFromSecret` (Map structure)                        | false                                                                                             |
 | `rrsa.accountId`                                               | (Alternative) Set the Alibaba Cloud Account ID to auto-construct OIDC Provider ARN. Format: `acs:ram::<accountId>:oidc-provider/ack-rrsa-<clusterId>` | `""`                                                                                              |
 | `rrsa.clusterId`                                               | (Alternative) Set the ACK Cluster ID to auto-construct OIDC Provider ARN. Used with rrsa.accountId | `""`                                                                                              |
 | `linux.enabled`                                                | Install alibabacloud provider on linux nodes                                                                                                                                                         | true                                                                                              |
-| `linux.image.repository`                                       | Linux image repository                                                                                                                                                                               | `registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud`         |
+| `linux.image.repository`                                       | Linux image repository                                                                                                                                                                               | `registry-cn-hangzhou.ack.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud`         |
 | `linux.image.pullPolicy`                                       | Linux image pull policy                                                                                                                                                                              | `Always`                                                                                        |
-| `linux.image.tag`                                              | Alibaba Cloud Secrets Manager Provider Linux image tag                                                                                                                                               | `v0.7.0`                                                                                        |
+| `linux.image.tag`                                              | Alibaba Cloud Secrets Manager Provider Linux image tag                                                                                                                                               | `v0.8.0`                                                                                        |
 | `linux.nodeSelector`                                           | Node Selector for the daemonset on linux nodes                                                                                                                                                       | `{}`                                                                                            |
 | `linux.tolerations`                                            | Tolerations for the daemonset on linux nodes                                                                                                                                                         | `[]`                                                                                            |
 | `linux.resources`                                              | Resource limit for provider pods on linux nodes                                                                                                                                                      | `requests.cpu: 50m<br>``requests.memory: 100Mi<br>``limits.cpu: 100m<br>``limits.memory: 500Mi` |
@@ -90,15 +91,15 @@ The following table lists the configurable parameters of the csi-secrets-store-p
 | `secrets-store-csi-driver.install`                             | Install secrets-store-csi-driver with this chart                                                                                                                                                     | true                                                                                              |
 | `secrets-store-csi-driver.fullnameOverride`                    | String to fully override secrets-store-csi-driver.fullname template with a string                                                                                                                    | `secrets-store-csi-driver`                                                                      |
 | `secrets-store-csi-driver.linux.enabled`                       | Install secrets-store-csi-driver on linux nodes                                                                                                                                                      | true                                                                                              |
-| `secrets-store-csi-driver.linux.crds.image.repository`         | CRDs installation image repository                                                                                                                                                                   | `registry.k8s.io/csi-secrets-store/driver-crds`                                                   |
+| `secrets-store-csi-driver.linux.crds.image.repository`         | CRDs installation image repository                                                                                                                                                                   | `registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-driver-crds`                           |
 | `secrets-store-csi-driver.linux.crds.image.tag`                | CRDs installation image tag                                                                                                                                                                          | `v1.6.0`                                                                                        |
-| `secrets-store-csi-driver.linux.image.repository`              | Driver Linux image repository                                                                                                                                                                        | ` registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-driver`                               |
+| `secrets-store-csi-driver.linux.image.repository`              | Driver Linux image repository                                                                                                                                                                        | `registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-driver`                                |
 | `secrets-store-csi-driver.linux.image.pullPolicy`              | Driver Linux image pull policy                                                                                                                                                                       | `Always`                                                                                        |
 | `secrets-store-csi-driver.linux.image.tag`                     | Driver Linux image tag                                                                                                                                                                               | `v1.6.0`                                                                                        |
-| `secrets-store-csi-driver.linux.livenessProbeImage.repository` | Linux liveness-probe image repository                                                                                                                                                                | `registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-livenessprobe`                         |
+| `secrets-store-csi-driver.linux.livenessProbeImage.repository` | Linux liveness-probe image repository                                                                                                                                                                | `registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-livenessprobe`                         |
 | `secrets-store-csi-driver.linux.livenessProbeImage.pullPolicy` | Linux liveness-probe image pull policy                                                                                                                                                               | `Always`                                                                                        |
 | `secrets-store-csi-driver.linux.livenessProbeImage.tag`        | Linux liveness-probe image tag                                                                                                                                                                       | `v2.18.0`                                                                                       |
-| `secrets-store-csi-driver.linux.registrarImage.repository`     | Linux node-driver-registrar image repository                                                                                                                                                         | `registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar`                               |
+| `secrets-store-csi-driver.linux.registrarImage.repository`     | Linux node-driver-registrar image repository                                                                                                                                                         | `registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-node-driver-registrar`                               |
 | `secrets-store-csi-driver.linux.registrarImage.pullPolicy`     | Linux node-driver-registrar image pull policy                                                                                                                                                        | `Always`                                                                                        |
 | `secrets-store-csi-driver.linux.registrarImage.tag`            | Linux node-driver-registrar image tag                                                                                                                                                                | `v2.16.0`                                                                                       |
 | `secrets-store-csi-driver.enableSecretRotation`                | Enable secret rotation feature [alpha]                                                                                                                                                               | `false`                                                                                         |
@@ -330,7 +331,7 @@ spec:
         secretProviderClass: "pod-sa-secrets"
 ```
 
-See [pod-sa-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/pod-sa-secretproviderclass.yaml) for a complete example.
+See [pod-sa-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/pod-sa-secretproviderclass.yaml) for a complete example.
 
 ### Verify the Mount
 
@@ -365,6 +366,27 @@ The provider supports **6 authentication methods**. This ensures maximum flexibi
 
 All authentication methods support **cross-account KMS access** by adding a single `crossAccountRoleArn` parameter.
 
+### Authentication Chain Behavior
+
+The provider evaluates authentication methods in a fixed priority order at runtime:
+
+1. **Pod SA RRSA** — triggered by `usePodServiceAccountToken: "true"` in SecretProviderClass
+2. **Provider RRSA** — triggered by `ALICLOUD_OIDC_PROVIDER_ARN` + `ALICLOUD_ROLE_ARN` environment variables
+3. **RAM Role** — triggered by `ACCESS_KEY_ID` + `ACCESS_KEY_ACCESS_SECRET` + `ALICLOUD_ROLE_ARN`
+4. **Node Publish Secret** — triggered by `nodePublishSecretRef` in the Pod spec
+5. **AK/SK** — triggered by `ACCESS_KEY_ID` + `ACCESS_KEY_ACCESS_SECRET`
+6. **ECS RAM Role** — unconditional fallback (uses the worker node's instance RAM role)
+
+**Selection semantics:**
+- If a method's prerequisites are **not configured**, it is skipped and the chain proceeds to the next method.
+- If a method is **explicitly enabled** but its required credentials are missing or invalid (e.g., `usePodServiceAccountToken: "true"` is set but the Pod SA token is not available, or the ServiceAccount lacks the `ack.alibabacloud.com/role-arn` annotation), the provider **fails immediately** with an error — it does NOT fall back to other methods.
+
+> **Important**: When using Pod SA RRSA authentication, ensure that:
+> - The CSI driver has `tokenRequests` configured (recommended: secrets-store-csi-driver >= v1.5.0; versions < v1.5.0 still work only if the upstream driver delivers tokens via VolumeContext, but >= v1.5.0 is strongly recommended)
+> - The Pod's ServiceAccount has the annotation `ack.alibabacloud.com/role-arn` set to the target RAM Role ARN
+> - The SecretProviderClass specifies the correct `audience` matching the OIDC provider configuration
+> - Note: The audience string `sts.aliyuncs.com` is hardcoded in the Provider; tokens issued for any other audience will be ignored and the mount will fail.
+
 ### Pod SA RRSA (Recommended)
 
 Pod ServiceAccount RRSA authentication provides **Pod-level permission isolation**, where each Pod uses the RAM Role specified in its ServiceAccount annotation for KMS access. This is the most secure and granular approach for multi-tenant or multi-environment scenarios.
@@ -394,7 +416,7 @@ For the complete configuration process (enable RRSA, create RAM Role, configure 
 - ✅ **Compliance requirements**: Pod-level access control and audit trail
 - ✅ **Microservices**: Each service has its own permission scope
 
-See the complete example: [pod-sa-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/pod-sa-secretproviderclass.yaml)
+See the complete example: [pod-sa-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/pod-sa-secretproviderclass.yaml)
 
 ### Provider RRSA
 
@@ -527,7 +549,7 @@ spec:
 - ❌ Requires Provider DaemonSet configuration
 
 See the complete examples:
-- [provider-rrsa-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/provider-rrsa-secretproviderclass.yaml) — SecretProviderClass and Pod configuration
+- [provider-rrsa-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/provider-rrsa-secretproviderclass.yaml) — SecretProviderClass and Pod configuration
 
 ### RAM Role ARN
 
@@ -640,7 +662,7 @@ No special configuration needed in SecretProviderClass.
 - ❌ More complex than RRSA
 - ❌ AK/SK still needed as base credential
 
-See the complete example: [ram-role-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ram-role-secretproviderclass.yaml)
+See the complete example: [ram-role-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ram-role-secretproviderclass.yaml)
 
 ### Node Publish Secret
 
@@ -738,7 +760,7 @@ spec:
 - ❌ AK/SK are long-term credentials without automatic rotation
 - ❌ Pod volume must explicitly configure `nodePublishSecretRef`
 
-See the complete example: [node-publish-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/node-publish-secretproviderclass.yaml)
+See the complete example: [node-publish-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/node-publish-secretproviderclass.yaml)
 
 ### AK/SK
 
@@ -802,7 +824,7 @@ envVarsFromSecret:
 - ❌ Manual rotation required
 - ❌ Does not support temporary credentials
 
-See the complete example: [ak-sk-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ak-sk-secretproviderclass.yaml)
+See the complete example: [ak-sk-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ak-sk-secretproviderclass.yaml)
 
 ### ECS RAM Role
 
@@ -839,7 +861,7 @@ Ensure the following:
 - ❌ Node-level isolation only
 - ❌ Requires Worker RAM Role setup
 
-See the complete example: [ecs-ram-role-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ecs-ram-role-secretproviderclass.yaml)
+See the complete example: [ecs-ram-role-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ecs-ram-role-secretproviderclass.yaml)
 
 ## Advanced Usage
 
@@ -968,7 +990,7 @@ spec:
         crossAccountRoleArn: "acs:ram::<TARGET_ACCOUNT_ID>:role/cross-account-kms-role"
 ```
 
-See the complete example: [cross-account-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/cross-account-secretproviderclass.yaml)
+See the complete example: [cross-account-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/cross-account-secretproviderclass.yaml)
 
 #### Troubleshooting
 
@@ -1161,7 +1183,7 @@ The parameters section contains the details of the mount request and contain one
     objects: |
         - objectName: "MySecret"
   ```
-* region: An optional field to specify the Alibaba Cloud region to use when retrieving secrets from Secrets Manager. If this field is missing, the provider will lookup the region of the node. This lookup adds overhead to mount requests so clusters using large numbers of pods will benefit from providing the region here.
+* region: An optional field to specify the Alibaba Cloud region to use when retrieving secrets from Secrets Manager. If this field is missing, the provider falls back to the region configured via the provider startup flag `--region` (Helm value `regionId`, default `cn-hangzhou`).
 * pathTranslation: An optional field to specify a substitution character to use when the path separator character (slash on Linux) is used in the file name. If a Secret or parameter name contains the path separator failures will occur when the provider tries to create a mounted file using the name. When not specified the underscore character is used, thus My/Path/Secret will be mounted as My_Path_Secret. This pathTranslation value can either be the string "False" or a single character string. When set to "False", no character substitution is performed.
 
 **Authentication-related parameters:**
@@ -1208,13 +1230,13 @@ The objects field of the SecretProviderClass can contain the following sub-field
 
 * kmsEndpoint：The optional field used to specify the endpoint for KMS Secrets Manager. If not specified, the default endpoint is `kms-vpc.{.region-id}.aliyuncs.com`.
 
-  kmsEndpoint configurations introduction：KMS currently supports two access methods: dedicated gateway and shared gateway. The application supports both methods, and different Endpoints need to be configured for each method. Below are the Endpoint address configurations for different gateways:
+  kmsEndpoint configurations introduction：The KMS service currently supports two access methods: **dedicated instance gateway** and **public gateway**, requiring the following endpoint configurations(For more differences between dedicated gateway access and shared gateway access, please refer to [Differences between shared and dedicated gateways for accessing KMS](https://www.alibabacloud.com/help/en/kms/key-management-service/developer-reference/classic-kms-sdkclassic-kms-sdk/#26484656d84ey)):
 
-  | Gateway Type          | Endpoint Address                                 | Usage Instructions                                                                                                                                                                                                                                                |
-  | --------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-  | Dedicated Gateway     | {kms-instance-id}.cryptoservice.kms.aliyuncs.com | 1. Requires the KMS instance and the cluster to be in the same Region and VPC.<br />2. Replace {kms-instance-id} with the actual KMS instance ID.<br />3. KMS instance version must be 3.0 or above. |
-  | VPC Shared Gateway    | kms-vpc.{region}.aliyuncs.com                    | 1. Requires the KMS instance and the cluster to be in the same Region.<br />2. Replace {region} with the Region where the KMS instance is located.<br />3. This is the default configuration for the application; no additional configuration is needed. |
-  | Public Shared Gateway | kms.{region}.aliyuncs.com                        | 1. Replace {region} with the Region where the KMS instance is located.<br />2. The cluster must have public network access capability. |
+| Gateway Type      | Domain Type        | Endpoint Address                                 | Usage Instructions                                                                                                             |
+| ----------------- | ------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Dedicated Gateway | KMS Private Domain | {kms-instance-id}.cryptoservice.kms.aliyuncs.com | 1. The KMS secret instance and cluster are in the same region and the same VPC.<br />2. Replace {kms-instance-id} with the ID of KMS secret instance.<br />3. The version of the KMS secret instance must be 3.0 or later. |
+| Shared Gateway    | VPC Domain         | kms-vpc.{region}.aliyuncs.com                    | 1. The KMS secret and cluster are in the same region.<br />2. Replace {region} with the region where the KMS secret is located.<br />3. This address can be used with the default configuration without additional setup. |
+| Shared Gateway    | Public Network     | kms.{region}.aliyuncs.com                        | 1. Replace {region} with the region where the KMS secret is located.<br />2. The cluster can access public network. |
 
 **Tips**
 If there is a special scene that requires the same objectName of the object (As shown in the following example, kms and oos have the same secret name), then you need to set different objectAlias of the object.Otherwise, all the secrets of the previously mounted objects will be overridden by the last one.
@@ -1246,6 +1268,56 @@ For these reasons, *when possible* we recommend using the Alibaba Cloud Service 
 
 - [Key Management Service API](https://www.alibabacloud.com/help/en/kms/key-management-service/developer-reference/api-getsecretvalue)
 - [Encrypt Parameter API](https://www.alibabacloud.com/help/en/oos/developer-reference/api-oos-2019-06-01-getsecretparameter)
+
+## Release Note
+
+| Version | Date              | Change                                                                                                   |
+| ------- | ----------------- | -------------------------------------------------------------------------------------------------------- |
+| `0.2.0` | June 20, 2023     | Upgrade secrets-store-csi-driver to version 1.3.4 to fix CVE-2023-2878                                   |
+| `0.3.0` | November 20, 2024 | Support synchronization Alibaba Cloud OOS Encrypted Parameter                                            |
+| `0.4.0` | May 23, 2025      | Support ECS Metadata Hardening-Only Mode                                                                 |
+| `0.5.0` | May 27, 2025      | Support configuration KMS Service Endpoint                                                               |
+| `0.6.0` | June 29, 2026     | 1. Support Pod ServiceAccount RRSA authentication; 2. Support cross-account KMS secret synchronization   |
+| `0.7.0` | July 30, 2026     | Harden KMS Endpoint validation                                                                           |
+| `0.8.0` | November 24, 2026 | Pod SA authentication optimization and hardening                                                         |
+
+## Upgrade Notes
+
+Behavioral changes that may require configuration adjustments before upgrading. 
+
+### v0.8.0 — Pod SA Authentication Hardening
+
+This release hardens Pod SA authentication for stability and security: correctly configured existing users need no changes; if you use Pod SA with incomplete configuration, verify against the checklist below.
+
+#### 1. Pod SA OIDC Token Now Passed In-Memory (No Longer Written to Disk)
+
+- **Change**: removed the Provider's `/tmp` temporary file writes and the corresponding emptyDir volume
+- **Benefit**: fixes mount ENOSPC caused by the /tmp tmpfs leak; eliminates the token-on-disk leakage risk
+- **Scope**: affects the Pod SA path only; Provider RRSA still reads the kubelet projected SA token
+- **User action**: none
+
+#### 2. Pod SA Authentication Changed From Silent Fallback to Fail-Closed
+
+When `usePodServiceAccountToken: "true"` is set in the SecretProviderClass, Mount will return an error — with no fallback to other authentication methods — if any of the following occurs:
+
+| Failure Condition | Previous Behavior |
+|---|---|
+| ServiceAccount lacks the `ack.alibabacloud.com/role-arn` annotation, or the annotation is empty | Skipped Pod SA, fell back through the auth chain |
+| CSI Driver delivered no token (both the secrets and volume-context paths are empty) | Same as above |
+| Delivered token does not contain the `sts.aliyuncs.com` audience (hardcoded by the Provider) | Same as above |
+
+**Design intent:** Silent fallback could let users believe they were using least-privilege Pod SA RRSA while actually running under a broader identity such as the Worker RAM Role, breaking multi-tenant isolation and auditing.
+
+**Pre-upgrade checklist:** (only for users with `usePodServiceAccountToken: "true"`)
+
+- [ ] CSIDriver has `tokenRequests: [{audience: sts.aliyuncs.com}]` configured (shipped by default in this Chart; secrets-store-csi-driver >= v1.5.0 recommended)
+- [ ] All ServiceAccounts used with Pod SA carry the `ack.alibabacloud.com/role-arn` annotation
+- [ ] The RAM Role trust policy includes `sts.aliyuncs.com` in `oidc:aud`
+
+**If the checklist fails:**
+
+- Complete the configuration (see [Pod SA RRSA (Recommended)](#pod-sa-rrsa-recommended));
+- Set `usePodServiceAccountToken` to `"false"` to fall back to another authentication method
 
 ## Security
 

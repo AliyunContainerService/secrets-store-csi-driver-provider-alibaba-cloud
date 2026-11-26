@@ -1,0 +1,19 @@
+# ============================================================================
+# Test Case: TC-004 Node Publish Secret Authentication Test (SecretProviderClass)
+# Objective: Verify accessing KMS secrets via nodePublishSecretRef credential passing
+# Auth Method: Node Publish Secret
+# ============================================================================
+
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: node-publish-test
+  namespace: ${NAMESPACE}
+  labels:
+    test-case: TC-004
+spec:
+  provider: alibabacloud
+  parameters:
+    objects: |
+      - objectName: "${NODE_PUB_SECRET_NAME}"
+        objectType: "kms"

@@ -1,0 +1,27 @@
+# ============================================================================
+# Test Case: TC-001 Pod SA RRSA Authentication Test (SecretProviderClass)
+# Objective: Verify Pod ServiceAccount RRSA authentication functionality
+# Auth Method: Pod SA RRSA (usePodServiceAccountToken: "true")
+# ============================================================================
+# - Provider uses OIDC token from Pod ServiceAccount to AssumeRole
+# - DaemonSet mode: rrsa_oidc_only (only OIDC Provider ARN)
+# ============================================================================
+
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: pod-sa-auth-test
+  namespace: ${NAMESPACE}  # Test namespace
+  labels:
+    test-type: pod-sa-rrsa-authentication
+    test-case: TC-001
+    version: v0.6.0
+spec:
+  provider: alibabacloud
+  parameters:
+    # Use Pod ServiceAccount token for RRSA authentication
+    usePodServiceAccountToken: "true"
+    # Configure secrets to access
+    objects: |
+      - objectName: "${POD_SA_SECRET_NAME}"
+        objectType: "kms"

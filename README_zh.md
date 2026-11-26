@@ -26,6 +26,7 @@
 - [故障排查](#故障排查)
 - [SecretProviderClass 选项](#secretproviderclass-选项)
 - [其他注意事项](#其他注意事项)
+- [升级须知](#升级须知)
 - [安全](#安全)
 - [许可证](#许可证)
 
@@ -65,14 +66,14 @@ helm install csi-secrets-store-provider-alibabacloud/csi-secrets-store-provider-
 | `envVarsFromSecret.ALICLOUD_ROLE_SESSION_NAME`                 | 设置 ALICLOUD_ROLE_SESSION_NAME 变量，指定用于构建 SDK 客户端的 RAM Role Session 名称，需在名为**alibaba-credentials** 的 Secret 中定义                                               |                                                                                                 |
 | `envVarsFromSecret.ALICLOUD_ROLE_SESSION_EXPIRATION`           | 设置 ALICLOUD_ROLE_SESSION_EXPIRATION 变量，指定用于构建 SDK 客户端的 RAM Role Session 过期时间，需在名为**alibaba-credentials** 的 Secret 中定义                                           |                                                                                                 |
 | `envVarsFromSecret.ALICLOUD_OIDC_PROVIDER_ARN`                 | 设置 ALICLOUD_OIDC_PROVIDER_ARN 变量，指定用于构建 SDK 客户端的 RAM OIDC Provider ARN。Secret 中的 data key 必须为`oidcproviderarn`，需在名为**alibaba-credentials** 的 Secret 中定义 |                                                                                                 |
-| `envVarsFromSecret.ALICLOUD_OIDC_TOKEN_FILE`                   | 设置 ALICLOUD_OIDC_TOKEN_FILE 变量，指定用于构建 SDK 客户端的 ServiceAccount OIDC Token 文件路径，需在名为**alibaba-credentials** 的 Secret 中定义                                    |                                                                                                 |
+| `envVarsFromSecret.ALICLOUD_OIDC_TOKEN_FILE`                   | 已废弃/无效：OIDC token 文件路径固定为 DaemonSet 投影令牌挂载路径（/var/run/secrets/tokens/csi-secrets-store-provider-alibabacloud），该变量不会被读取。                                    |                                                                                                 |
 | `rrsa.enable`                                                  | 启用 RRSA 功能（alpha），默认为 false。启用后需通过`rrsa.accountId`/`rrsa.clusterId` 自动构造 OIDC Provider ARN，或通过 `envVarsFromSecret`（Map 结构）显式配置 `ALICLOUD_OIDC_PROVIDER_ARN`   | false                                                                                           |
 | `rrsa.accountId`                                               | （可选）设置阿里云账号 ID 以自动构造 OIDC Provider ARN。格式：`acs:ram::<accountId>:oidc-provider/ack-rrsa-<clusterId>`                                                               | `""`                                                                                            |
 | `rrsa.clusterId`                                               | （可选）设置 ACK 集群 ID 以自动构造 OIDC Provider ARN。与 rrsa.accountId 配合使用                                                                                                     | `""`                                                                                            |
 | `linux.enabled`                                                | 在 Linux 节点上安装 Alibaba Cloud Provider                                                                                                                                            | true                                                                                            |
-| `linux.image.repository`                                       | Linux 镜像仓库                                                                                                                                                                        | `registry.cn-hangzhou.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud`         |
+| `linux.image.repository`                                       | Linux 镜像仓库                                                                                                                                                                        | `registry-cn-hangzhou.ack.aliyuncs.com/acs/secrets-store-csi-driver-provider-alibaba-cloud`         |
 | `linux.image.pullPolicy`                                       | Linux 镜像拉取策略                                                                                                                                                                    | `Always`                                                                                        |
-| `linux.image.tag`                                              | 阿里云密钥管理服务 Provider Linux 镜像标签                                                                                                                                            | `v0.7.0`                                                                                        |
+| `linux.image.tag`                                              | 阿里云密钥管理服务 Provider Linux 镜像标签                                                                                                                                            | `v0.8.0`                                                                                        |
 | `linux.nodeSelector`                                           | Linux 节点 DaemonSet 的节点选择器                                                                                                                                                     | `{}`                                                                                            |
 | `linux.tolerations`                                            | Linux 节点 DaemonSet 的容忍度配置                                                                                                                                                     | `[]`                                                                                            |
 | `linux.resources`                                              | Linux 节点 Provider Pod 的资源限制                                                                                                                                                    | `requests.cpu: 50m<br>``requests.memory: 100Mi<br>``limits.cpu: 100m<br>``limits.memory: 500Mi` |
@@ -91,15 +92,15 @@ helm install csi-secrets-store-provider-alibabacloud/csi-secrets-store-provider-
 | `secrets-store-csi-driver.install`                             | 随此 Chart 一起安装 secrets-store-csi-driver                                                                                                                                          | true                                                                                            |
 | `secrets-store-csi-driver.fullnameOverride`                    | 完全覆盖 secrets-store-csi-driver.fullname 模板的字符串                                                                                                                               | `secrets-store-csi-driver`                                                                      |
 | `secrets-store-csi-driver.linux.enabled`                       | 在 Linux 节点上安装 secrets-store-csi-driver                                                                                                                                          | true                                                                                            |
-| `secrets-store-csi-driver.linux.crds.image.repository`         | CRDs 安装镜像仓库                                                                                                                                                                     | `registry.k8s.io/csi-secrets-store/driver-crds`                                                 |
+| `secrets-store-csi-driver.linux.crds.image.repository`         | CRDs 安装镜像仓库                                                                                                                                                                     | `registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-driver-crds`                       |
 | `secrets-store-csi-driver.linux.crds.image.tag`                | CRDs 安装镜像标签                                                                                                                                                                     | `v1.6.0`                                                                                        |
-| `secrets-store-csi-driver.linux.image.repository`              | Driver Linux 镜像仓库                                                                                                                                                                 | ` registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-driver`                               |
+| `secrets-store-csi-driver.linux.image.repository`              | Driver Linux 镜像仓库                                                                                                                                                                 | `registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-driver`                                |
 | `secrets-store-csi-driver.linux.image.pullPolicy`              | Driver Linux 镜像拉取策略                                                                                                                                                             | `Always`                                                                                        |
 | `secrets-store-csi-driver.linux.image.tag`                     | Driver Linux 镜像标签                                                                                                                                                                 | `v1.6.0`                                                                                        |
-| `secrets-store-csi-driver.linux.livenessProbeImage.repository` | Linux liveness-probe 镜像仓库                                                                                                                                                         | `registry.cn-hangzhou.aliyuncs.com/acs/csi-secrets-store-livenessprobe`                         |
+| `secrets-store-csi-driver.linux.livenessProbeImage.repository` | Linux liveness-probe 镜像仓库                                                                                                                                                         | `registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-secrets-store-livenessprobe`                         |
 | `secrets-store-csi-driver.linux.livenessProbeImage.pullPolicy` | Linux liveness-probe 镜像拉取策略                                                                                                                                                     | `Always`                                                                                        |
 | `secrets-store-csi-driver.linux.livenessProbeImage.tag`        | Linux liveness-probe 镜像标签                                                                                                                                                         | `v2.18.0`                                                                                       |
-| `secrets-store-csi-driver.linux.registrarImage.repository`     | Linux node-driver-registrar 镜像仓库                                                                                                                                                  | `registry.cn-hangzhou.aliyuncs.com/acs/csi-node-driver-registrar`                               |
+| `secrets-store-csi-driver.linux.registrarImage.repository`     | Linux node-driver-registrar 镜像仓库                                                                                                                                                  | `registry-cn-hangzhou.ack.aliyuncs.com/acs/csi-node-driver-registrar`                               |
 | `secrets-store-csi-driver.linux.registrarImage.pullPolicy`     | Linux node-driver-registrar 镜像拉取策略                                                                                                                                              | `Always`                                                                                        |
 | `secrets-store-csi-driver.linux.registrarImage.tag`            | Linux node-driver-registrar 镜像标签                                                                                                                                                  | `v2.16.0`                                                                                       |
 | `secrets-store-csi-driver.enableSecretRotation`                | 启用密钥轮转功能 [alpha]                                                                                                                                                              | `false`                                                                                         |
@@ -331,7 +332,7 @@ spec:
         secretProviderClass: "pod-sa-secrets"
 ```
 
-完整示例请参见 [pod-sa-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/pod-sa-secretproviderclass.yaml)。
+完整示例请参见 [pod-sa-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/pod-sa-secretproviderclass.yaml)。
 
 ### 验证挂载
 
@@ -367,6 +368,27 @@ Provider 支持 **6 种认证方式**。这确保了最大的灵活性和向后�
 
 所有认证方式均支持通过添加单个 `crossAccountRoleArn` 参数实现**跨账号 KMS 访问**。
 
+### 认证链行为
+
+Provider 在运行时按固定优先级顺序评估认证方式：
+
+1. **Pod SA RRSA** — 由 SecretProviderClass 中 `usePodServiceAccountToken: "true"` 触发
+2. **Provider RRSA** — 由 `ALICLOUD_OIDC_PROVIDER_ARN` + `ALICLOUD_ROLE_ARN` 环境变量触发
+3. **RAM Role** — 由 `ACCESS_KEY_ID` + `ACCESS_KEY_ACCESS_SECRET` + `ALICLOUD_ROLE_ARN` 触发
+4. **Node Publish Secret** — 由 Pod spec 中的 `nodePublishSecretRef` 触发
+5. **AK/SK** — 由 `ACCESS_KEY_ID` + `ACCESS_KEY_ACCESS_SECRET` 触发
+6. **ECS RAM Role** — 无条件兜底（使用工作节点的实例 RAM 角色）
+
+**选择语义：**
+- 若某认证方式的前置条件**未配置**，则跳过该方式，链继续评估下一种。
+- 若某认证方式被**显式启用**但其所需凭证缺失或无效（例如设置了 `usePodServiceAccountToken: "true"` 但 Pod SA Token 不可用，或 ServiceAccount 缺少 `ack.alibabacloud.com/role-arn` 注解），Provider 将**立即失败**并返回错误——不会回退到其他认证方式。
+
+> **重要提示**：使用 Pod SA RRSA 认证时，请确保：
+> - CSI driver 已配置 `tokenRequests`（推荐 secrets-store-csi-driver >= v1.5.0；< v1.5.0 版本仅在上游 driver 通过 VolumeContext 投递 token 时仍可工作，但强烈推荐使用 >= v1.5.0）
+> - Pod 的 ServiceAccount 已设置注解 `ack.alibabacloud.com/role-arn` 指向目标 RAM Role ARN
+> - SecretProviderClass 中指定的 `audience` 与 OIDC Provider 配置一致
+> - 注意：audience 字符串 `sts.aliyuncs.com` 在 Provider 中硬编码；为其他 audience 签发的 token 将被忽略，Mount 将失败。
+
 ### Pod SA RRSA（推荐）
 
 Pod ServiceAccount RRSA 认证提供 **Pod 级别的权限隔离**，每个 Pod 通过其使用的 ServiceAccount 注解中指定的 RAM Role 进行 KMS 访问。这是多租户或多环境场景中最安全、最细粒度的方式。
@@ -396,7 +418,7 @@ Pod SA 的 RAM Role ARN 通过 ServiceAccount 上的 `ack.alibabacloud.com/role-
 - ✅ **合规要求**：Pod 级别的访问控制和审计追踪
 - ✅ **微服务**：每个服务拥有独立的权限范围
 
-完整示例：[pod-sa-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/pod-sa-secretproviderclass.yaml)
+完整示例：[pod-sa-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/pod-sa-secretproviderclass.yaml)
 
 ### Provider RRSA
 
@@ -530,7 +552,7 @@ spec:
 
 完整示例：
 
-- [provider-rrsa-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/provider-rrsa-secretproviderclass.yaml) — SecretProviderClass 和 Pod 配置
+- [provider-rrsa-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/provider-rrsa-secretproviderclass.yaml) — SecretProviderClass 和 Pod 配置
 
 ### RAM Role ARN
 
@@ -643,7 +665,7 @@ SecretProviderClass 中无需特殊配置。
 - ❌ 比 RRSA 更复杂
 - ❌ 仍需要 AK/SK 作为基础凭证
 
-完整示例：[ram-role-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ram-role-secretproviderclass.yaml)
+完整示例：[ram-role-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ram-role-secretproviderclass.yaml)
 
 ### Node Publish Secret
 
@@ -742,7 +764,7 @@ spec:
 - ❌ AK/SK 为长期凭证，不会自动轮转
 - ❌ Pod 卷必须显式配置 `nodePublishSecretRef`
 
-完整示例：[node-publish-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/node-publish-secretproviderclass.yaml)
+完整示例：[node-publish-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/node-publish-secretproviderclass.yaml)
 
 ### AK/SK
 
@@ -806,7 +828,7 @@ envVarsFromSecret:
 - ❌ 需手动轮转
 - ❌ 不支持临时凭证
 
-完整示例：[ak-sk-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ak-sk-secretproviderclass.yaml)
+完整示例：[ak-sk-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ak-sk-secretproviderclass.yaml)
 
 ### ECS RAM Role
 
@@ -843,7 +865,7 @@ ECS RAM Role 认证自动从 ECS 实例元数据服务获取临时凭证。在 A
 - ❌ 仅支持节点级别隔离
 - ❌ 需要预先设置 Worker RAM Role
 
-完整示例：[ecs-ram-role-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ecs-ram-role-secretproviderclass.yaml)
+完整示例：[ecs-ram-role-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/ecs-ram-role-secretproviderclass.yaml)
 
 ## 高级用法
 
@@ -975,7 +997,7 @@ spec:
         crossAccountRoleArn: "acs:ram::<TARGET_ACCOUNT_ID>:role/cross-account-kms-role"
 ```
 
-完整示例：[cross-account-secretproviderclass.yaml](https://github.com/aliyun/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/cross-account-secretproviderclass.yaml)
+完整示例：[cross-account-secretproviderclass.yaml](https://github.com/AliyunContainerService/secrets-store-csi-driver-provider-alibaba-cloud/blob/master/examples/cross-account-secretproviderclass.yaml)
 
 #### 故障排查
 
@@ -1058,6 +1080,7 @@ Provider 通过 CSI Driver 的 [RequiresRepublish](https://secrets-store-csi-dri
     --set enableSecretRotation=true \
     --set rotationPollInterval=1h
   ```
+
 - `requiresRepublish` 是 **CSIDriver** 对象的字段（而非 SecretProviderClass）。当设置 `enableSecretRotation=true` 时，Helm chart 会自动设置该字段，无需手动配置。
 
 #### 工作原理（v1.6.0+）
@@ -1170,7 +1193,7 @@ parameters 部分包含挂载请求的详细信息，包含以下字段之一：
     objects: |
         - objectName: "MySecret"
   ```
-* region：可选字段，指定从密钥管理服务检索密钥时使用的阿里云地域。如果缺少此字段，Provider 会查找节点所在的地域。此查找会增加挂载请求的开销，因此使用大量 Pod 的集群可通过在此处指定地域来获得性能提升。
+* region：可选字段，指定从密钥管理服务检索密钥时使用的阿里云地域。如果缺少此字段，Provider 将回退到启动参数 `--region` 配置的地域（Helm 参数 `regionId`，默认 cn-hangzhou）。
 * pathTranslation：可选字段，指定当路径分隔符（Linux 上为斜杠）出现在文件名中时使用的替换字符。如果 Secret 或参数名称包含路径分隔符，Provider 尝试使用该名称创建挂载文件时会失败。未指定时使用下划线，因此 My/Path/Secret 将挂载为 My_Path_Secret。此 pathTranslation 值可以是字符串 "False" 或单个字符字符串。设置为 "False" 时，不进行字符替换。
 
 **认证相关参数：**
@@ -1216,14 +1239,13 @@ SecretProviderClass 的 objects 字段可包含以下子字段：
   * objectAlias：必填字段，指定键值对密钥挂载时的文件名
 * kmsEndpoint：可选字段，用于指定 KMS 密钥管理服务的访问端点。如未指定，默认端点为 `kms-vpc.{.region-id}.aliyuncs.com`。
 
-  kmsEndpoint 配置说明：KMS 目前支持两种访问方式：专属网关和共享网关。应用支持两种方式，不同方式需要配置不同的 Endpoint。以下是不同网关的 Endpoint 地址配置：
+  kmsEndpoint 配置说明：访问 KMS 服务获取凭据当前支持专属实例网关和共享网关两种方式，需要参考以下说明进行endpoint配置(关于专属网关访问和共享网关访问的更多差异，请参见[共享网关和专属网关的差异](https://www.alibabacloud.com/help/zh/kms/key-management-service/developer-reference/classic-kms-sdkclassic-kms-sdk/#d61514b089my8))：
 
-
-  | 网关类型     | Endpoint 地址                                    | 使用说明                                                                                                                                    |
-  | ------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-  | 专属网关     | {kms-instance-id}.cryptoservice.kms.aliyuncs.com | 1. 需要 KMS 实例与集群在同一地域和 VPC 中。<br />2. 将 {kms-instance-id} 替换为实际的 KMS 实例 ID。<br />3. KMS 实例版本必须为 3.0 及以上。 |
-  | VPC 共享网关 | kms-vpc.{region}.aliyuncs.com                    | 1. 需要 KMS 实例与集群在同一地域。<br />2. 将 {region} 替换为 KMS 实例所在的地域。<br />3. 这是应用的默认配置，无需额外配置。               |
-  | 公网共享网关 | kms.{region}.aliyuncs.com                        | 1. 将 {region} 替换为 KMS 实例所在的地域。<br />2. 集群必须具备公网访问能力。                                                               |
+   | 网关类型     | 域名类型    | Endpoint 地址                                     | 使用说明                                                                                                                                |
+   | ----------- | ----------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+   | 专属网关     | KMS私网域名 | {kms-instance-id}.cryptoservice.kms.aliyuncs.com | 1. 要求 KMS 凭据所属实例和集群 Region 相同且VPC 相同<br />2. 替换 {kms-instance-id} 为KMS凭据所属实例ID<br />3. KMS 凭据所属实例版本 3.0 以上 |
+   | 共享网关     | VPC域名     | kms-vpc.{region}.aliyuncs.com                    | 1. 要求 KMS 凭据和集群 Region 相同<br />2. 替换 {region} 为 KMS 凭据所在的region<br />3. 应用默认配置，使用此地址时无需配置                  |
+   | 共享网关     | 公网        | kms.{region}.aliyuncs.com                        | 1. 替换 {region} 为 KMS 凭据所在的 region<br />2. 集群具有公网访问能力                                                                    |
 
 **提示**
 如果有特殊场景需要相同的 objectName（如下例所示，kms 和 oos 有相同的密钥名称），则需要为对象设置不同的 objectAlias。否则，之前挂载的所有密钥将被最后一个覆盖。
@@ -1255,6 +1277,56 @@ parameters:
 
 - [密钥管理服务 API](https://www.alibabacloud.com/help/zh/kms/key-management-service/developer-reference/api-getsecretvalue)
 - [加密参数 API](https://www.alibabacloud.com/help/zh/oos/developer-reference/api-oos-2019-06-01-getsecretparameter)
+
+## Release Note
+
+| 版本号   | 变更时间       | 变更内容                                                       | 
+| ------- | ------------- | ------------------------------------------------------------- |
+| `0.2.0` | 2023年06月20日 | 升级secrets-store-csi-driver到1.3.4版本以修复CVE-2023-2878      |
+| `0.3.0` | 2024年11月20日 | 支持同步阿里云 OOS 加密参数                                     |
+| `0.4.0` | 2025年5月23日  | 支持ECS Metadata仅加固模式                                     |
+| `0.5.0` | 2025年5月27日  | 支持KMS Service Endpoint可配置                                 |
+| `0.6.0` | 2026年6月29日  | 1. 支持 POD Serviceaccount RRSA 认证；2. 支持跨账号同步 KMS 凭据 |
+| `0.7.0` | 2026年7月30日  | 加固 KMS Endpoint 校验                                        | 
+| `0.8.0` | 2026年11月24日 | Pod SA 认证优化和加固                                          |
+
+## 升级须知
+
+以下行为变更可能需要在升级前调整配置。
+
+### v0.8.0 — Pod SA 认证加固
+
+本版本对 Pod SA 认证做了稳定性与安全性加固，配置正确的存量用户无需任何变更；使用 Pod SA 但配置不全的用户请按下方清单核对。
+
+#### 1. Pod SA OIDC Token 改为内存传递（不再落盘）
+
+- **变更**：移除 Provider `/tmp` 临时文件写入与对应 emptyDir 卷
+- **收益**：修复 /tmp tmpfs 泄漏导致的 mount ENOSPC；消除 token 落盘泄漏风险
+- **范围**：仅影响 Pod SA 路径；Provider RRSA 仍读 kubelet projected SA token
+- **用户动作**：无
+
+#### 2. Pod SA 认证由静默降级改为硬失败
+
+当 SecretProviderClass 设置 `usePodServiceAccountToken: "true"` 时，以下任一情况发生时 Mount 将返回错误，不再回退到其他认证方式：
+
+| 失败情况 | 旧行为 |
+|---|---|
+| ServiceAccount 缺少 `ack.alibabacloud.com/role-arn` 注解或注解为空 | 跳过 Pod SA，链式回退 |
+| CSI Driver 未投递 token（secrets 和 volume-context 双路径均为空） | 同上 |
+| 投递的 token 中不包含 `sts.aliyuncs.com` audience（Provider 硬编码） | 同上 |
+
+**设计意图：** 静默降级会让用户以为在用最小权限的 Pod SA RRSA，实际却落到 Worker RAM Role 等更大权限身份，破坏多租户隔离与审计。
+
+**升级前自检清单：**（仅 `usePodServiceAccountToken: "true"` 的用户需要）
+
+- [ ] CSIDriver 已配置 `tokenRequests: [{audience: sts.aliyuncs.com}]`（本 Chart 默认下发；建议 secrets-store-csi-driver >= v1.5.0）
+- [ ] 所有使用 Pod SA 的 ServiceAccount 都有 `ack.alibabacloud.com/role-arn` 注解
+- [ ] RAM Role 信任策略中 `oidc:aud` 包含 `sts.aliyuncs.com`
+
+**未通过自检的处理：**
+
+- 补全配置（参见 [Pod SA RRSA（推荐）](#pod-sa-rrsa推荐)）；
+- 将 `usePodServiceAccountToken` 设为 `"false"`，回退到其他认证方式
 
 ## 安全
 
